@@ -45,6 +45,9 @@ Public Class TVA_locate
 
                     searchDic.Add(pp.PFname, pp.MyPoint)
 
+                Else
+
+                    searchDic.Add("No PF name;" + pp.Diam + ";" + pp.uuid, pp.MyPoint)
                 End If
 
 

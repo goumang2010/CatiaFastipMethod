@@ -135,18 +135,18 @@
     <Import Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CENPoint.vb" />
-    <Compile Include="CENPoints.vb" />
-    <Compile Include="CENSP01.vb" />
-    <Compile Include="CENSP01s.vb" />
+    <Compile Include="Model\CENPoint.vb" />
+    <Compile Include="Model\CENPoints.vb" />
+    <Compile Include="Model\CENSP01.vb" />
+    <Compile Include="Model\CENSP01s.vb" />
     <Compile Include="Process_Method.vb" />
     <Compile Include="Coord_op\clsMath3x3Matrix.vb" />
     <Compile Include="Coord_op\clsMathTransformation.vb" />
     <Compile Include="Coord_op\clsMathVector.vb" />
     <Compile Include="Coord_op\mdlProductTransformation.vb" />
-    <Compile Include="processTree.vb" />
-    <Compile Include="processTreeBase.vb" />
-    <Compile Include="processTreeList.vb" />
+    <Compile Include="Model\processTree.vb" />
+    <Compile Include="Model\processTreeBase.vb" />
+    <Compile Include="Model\processTreeList.vb" />
     <Compile Include="TVA_locate.Designer.vb">
       <DependentUpon>TVA_locate.vb</DependentUpon>
     </Compile>
