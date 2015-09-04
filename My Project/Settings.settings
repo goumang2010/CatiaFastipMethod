@@ -1,0 +1,15 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="My" GeneratedClassName="MySettings" UseMySettingsClassName="true">
+  <Profiles />
+  <Settings>
+    <Setting Name="templateTVAPath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">\\192.168.3.32\softwareTools\Autorivet_team_manage\template\tempTVAforall.CATPart</Value>
+    </Setting>
+    <Setting Name="producttablePath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">\\192.168.3.32\softwareTools\Autorivet_team_manage\template\ProductTable.xls</Value>
+    </Setting>
+    <Setting Name="lookuptablePath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">\\192.168.3.32\softwareTools\Autorivet_team_manage\template\ProductTable.xls</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
