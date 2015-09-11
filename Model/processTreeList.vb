@@ -51,26 +51,38 @@ Public Class processTreeList
     '    inputShape(MyGeoSet)
 
     'End Sub
-    Public Sub inputShape(ByRef MyGeoSet As HybridBody, Optional fstlist As List(Of String) = Nothing)
+    Public Sub inputShape(ByRef MyGeoSet As HybridBody, Optional iffilvis As Boolean = False)
         '仅可用于读取TVA
         ' Dim tmplst As New List(Of processTree)()
 
-        FastList = fstlist
+        ' FastList = fstlist
+        If iffilvis Then
+            'to filter the geoset which is hidden
 
-        If (FastList.Contains(MyGeoSet.Name)) Then
-            Add(New processTree(MyGeoSet))
-
-
-        Else
-            '  parproduct()
-            Dim k As Integer
-
-            For k = 1 To MyGeoSet.HybridBodies.Count
-                '开始递归
-                inputShape(MyGeoSet.HybridBodies.Item(k))
-            Next
+            If Not TVA_Method.ifGeoVis(MyGeoSet) Then
+                Exit Sub
+            End If
 
         End If
+
+
+
+
+        If (FastList.Contains(MyGeoSet.Name)) Then
+                Add(New processTree(MyGeoSet, iffilvis))
+
+
+            Else
+                '  parproduct()
+                Dim k As Integer
+
+                For k = 1 To MyGeoSet.HybridBodies.Count
+                    '开始递归
+                    inputShape(MyGeoSet.HybridBodies.Item(k), iffilvis:=iffilvis)
+                Next
+
+            End If
+
 
     End Sub
 
@@ -111,6 +123,32 @@ Public Class processTreeList
 
 
     End Sub
+
+    Public Function output_fst() As processStatic
+        Dim tmpStatic As New processStatic
+
+
+        For Each ppls As processTree In treeList.Values
+            Dim count As Integer = 0
+
+            For Each pp In ppls.fastenertree.Values
+
+                count += pp.Count / 2
+
+            Next
+
+            tmpStatic.Add(count, ppls.fasternername)
+        Next
+
+        Return tmpStatic
+    End Function
+
+
+
+
+
+
+
 
     Public Sub del(partname As String)
 

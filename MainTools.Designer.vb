@@ -67,6 +67,8 @@ Partial Class MainTools
         Me.Label8 = New System.Windows.Forms.Label()
         Me.Button4 = New System.Windows.Forms.Button()
         Me.TabPage4 = New System.Windows.Forms.TabPage()
+        Me.DataGridView1 = New System.Windows.Forms.DataGridView()
+        Me.Button11 = New System.Windows.Forms.Button()
         Me.Button10 = New System.Windows.Forms.Button()
         Me.Button9 = New System.Windows.Forms.Button()
         Me.Button6 = New System.Windows.Forms.Button()
@@ -96,6 +98,7 @@ Partial Class MainTools
         Me.TabPage2.SuspendLayout()
         Me.TabPage3.SuspendLayout()
         Me.TabPage4.SuspendLayout()
+        CType(Me.DataGridView1, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.MenuStrip1.SuspendLayout()
         Me.SuspendLayout()
         '
@@ -564,6 +567,8 @@ Partial Class MainTools
         '
         'TabPage4
         '
+        Me.TabPage4.Controls.Add(Me.DataGridView1)
+        Me.TabPage4.Controls.Add(Me.Button11)
         Me.TabPage4.Controls.Add(Me.Button10)
         Me.TabPage4.Controls.Add(Me.Button9)
         Me.TabPage4.Controls.Add(Me.Button6)
@@ -577,6 +582,27 @@ Partial Class MainTools
         Me.TabPage4.TabIndex = 3
         Me.TabPage4.Text = "Show/Hide"
         Me.TabPage4.UseVisualStyleBackColor = True
+        '
+        'DataGridView1
+        '
+        Me.DataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize
+        Me.DataGridView1.ColumnHeadersVisible = False
+        Me.DataGridView1.Location = New System.Drawing.Point(344, 142)
+        Me.DataGridView1.Name = "DataGridView1"
+        Me.DataGridView1.RowHeadersVisible = False
+        Me.DataGridView1.RowHeadersWidth = 4
+        Me.DataGridView1.RowTemplate.Height = 23
+        Me.DataGridView1.Size = New System.Drawing.Size(186, 211)
+        Me.DataGridView1.TabIndex = 12
+        '
+        'Button11
+        '
+        Me.Button11.Location = New System.Drawing.Point(344, 102)
+        Me.Button11.Name = "Button11"
+        Me.Button11.Size = New System.Drawing.Size(75, 23)
+        Me.Button11.TabIndex = 11
+        Me.Button11.Text = "Statistic"
+        Me.Button11.UseVisualStyleBackColor = True
         '
         'Button10
         '
@@ -799,6 +825,7 @@ Partial Class MainTools
         Me.TabPage3.ResumeLayout(False)
         Me.TabPage3.PerformLayout()
         Me.TabPage4.ResumeLayout(False)
+        CType(Me.DataGridView1, System.ComponentModel.ISupportInitialize).EndInit()
         Me.MenuStrip1.ResumeLayout(False)
         Me.MenuStrip1.PerformLayout()
         Me.ResumeLayout(False)
@@ -873,4 +900,6 @@ Partial Class MainTools
     Friend WithEvents Button8 As Windows.Forms.Button
     Friend WithEvents Button10 As Windows.Forms.Button
     Friend WithEvents Button9 As Windows.Forms.Button
+    Friend WithEvents Button11 As Windows.Forms.Button
+    Friend WithEvents DataGridView1 As Windows.Forms.DataGridView
 End Class

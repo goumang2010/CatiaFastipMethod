@@ -33,7 +33,7 @@ Public Class Process_Method
 
             System.Diagnostics.Process.Start("C:\OPT\DS\DELMIA\2104_64\win_b64\code\bin\CATSTART.exe", " -run ""CNEXT.exe"" -env FASTTRIM_FASTTIP_FASTCURVE_FASTSURF_V3R13 -direnv ""C:\OPT\CENIT\FAST\R14\SP4\2104_64\CATEnv"" -nowindow -object """ + filepath + """")
 
-            Threading.Thread.Sleep(40000)
+            Threading.Thread.Sleep(80000)
 
         Else
 
@@ -52,7 +52,7 @@ Public Class Process_Method
             Else
 
                 System.Diagnostics.Process.Start("C:\OPT\DS\DELMIA\2104_64\win_b64\code\bin\CATSTART.exe", " -run ""CNEXT.exe"" -env FASTTRIM_FASTTIP_FASTCURVE_FASTSURF_V3R13 -direnv ""C:\OPT\CENIT\FAST\R14\SP4\2104_64\CATEnv"" -nowindow -object """ + filepath + """")
-                Threading.Thread.Sleep(40000)
+                Threading.Thread.Sleep(80000)
             End If
 
         End If

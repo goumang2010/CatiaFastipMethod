@@ -23,7 +23,7 @@ Public Class processTree : Inherits processTreeBase
 
 
 
-    Public Sub New(ByRef myGeoSet As HybridBody)
+    Public Sub New(ByRef myGeoSet As HybridBody, Optional iffiltervis As Boolean = False)
         'ppat不赋值的话，表示不需要录入组件坐标
         CATIA = myGeoSet.Application
         fastgeoset = myGeoSet
@@ -41,10 +41,153 @@ Public Class processTree : Inherits processTreeBase
 
 
 
-        Add(myGeoSet)
+        ' Add(myGeoSet)
         ' fastenertree.Add()
         ' Dim partDocument1 As PartDocument
         ' partDocument1 = myGeoSet..Application.ActiveDocument
+
+        For i = 1 To myGeoSet.HybridBodies.Count
+
+            Dim MyNewGeoSet As HybridBody
+
+            MyNewGeoSet = myGeoSet.HybridBodies.Item(i)
+
+
+
+
+            Dim processty As String
+            processty = MyNewGeoSet.Name.Replace(fasternername + " - ", "")
+            If Strings.InStr(MyNewGeoSet.Name, "RESYNCING") Then
+
+                For j = 1 To MyNewGeoSet.HybridBodies.Count
+                    Dim MyNew2GeoSet As HybridBody
+                    MyNew2GeoSet = MyNewGeoSet.HybridBodies.Item(j)
+
+
+
+
+
+
+
+
+
+
+
+                    Dim tmplist2 As New List(Of HybridShape)
+
+                    Dim processty2 As String
+                    processty2 = MyNew2GeoSet.Name
+
+                    Dim ryncptcount = MyNew2GeoSet.HybridShapes.Count
+
+                    If ryncptcount > 0 Then
+
+                        'test if visible
+
+
+                        If iffiltervis Then
+                            Dim State
+                            Dim selection1 As Selection
+                            selection1 = CATIA.ActiveDocument.Selection
+                            selection1.Clear()
+                            selection1.Add(MyNew2GeoSet.HybridShapes.Item(1))
+                            Dim oVisProps = selection1.VisProperties
+                            oVisProps.GetShow(State)
+
+                            If State = 1 Then
+                                'if any point is hidden,then skip all points in the geo
+                                Continue For
+
+
+                            End If
+                            '   If selection1.VisProperties.
+                        End If
+
+
+
+                        If iffiltervis Then
+                            'to filter the geoset which is hidden
+
+                            If TVA_Method.ifGeoVis(MyNew2GeoSet.HybridShapes.Item(1)) And TVA_Method.ifGeoVis(MyNew2GeoSet) Then
+                            Else
+
+                                Continue For
+                            End If
+
+                        End If
+
+
+                        For l = 1 To ryncptcount
+
+
+
+                            Dim hs = MyNew2GeoSet.HybridShapes.Item(l)
+
+
+
+                            fastenertree(processty + " - " + processty2).Add(hs)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        Next
+                    End If
+
+                    '  fastenertree(processty + ";" + processty2).AddRange(tmplist2)
+
+
+                Next
+
+
+
+
+            Else
+                ' Dim tmplist As New List(Of HybridShape)
+
+                Dim geocount = MyNewGeoSet.HybridShapes.Count
+
+                If geocount > 0 Then
+                    Dim hs = MyNewGeoSet.HybridShapes.Item(1)
+
+
+                    If iffiltervis Then
+                        'to filter the geoset which is hidden
+
+                        If TVA_Method.ifGeoVis(hs) And TVA_Method.ifGeoVis(MyNewGeoSet) Then
+                        Else
+
+                            Continue For
+                        End If
+
+                    End If
+
+
+
+                    For k = 1 To geocount
+
+                        hs = MyNewGeoSet.HybridShapes.Item(k)
+
+
+
+                        fastenertree(processty).Add(hs)
+
+                    Next
+
+                End If
+                ' fastenertree(processty).AddRange(tmplist)
+            End If
+        Next
+
 
 
     End Sub
@@ -345,64 +488,81 @@ Public Class processTree : Inherits processTreeBase
 
         fastenertree(processtp).Add(point)
     End Sub
-    Public Sub Add(ByRef myGeoSet As HybridBody)
+    'Public Sub Add(ByRef myGeoSet As HybridBody, Optional iffiltervis As Boolean = False)
 
-        'Dim framename As String
-        'framename = myGeoSet.Parent.Name
-        'Dim fasterner As String
-        'fasterner = myGeoSet.Name
+    '    'Dim framename As String
+    '    'framename = myGeoSet.Parent.Name
+    '    'Dim fasterner As String
+    '    'fasterner = myGeoSet.Name
 
-        For i = 1 To myGeoSet.HybridBodies.Count
+    '    For i = 1 To myGeoSet.HybridBodies.Count
 
-            Dim MyNewGeoSet As HybridBody
+    '        Dim MyNewGeoSet As HybridBody
 
-            MyNewGeoSet = myGeoSet.HybridBodies.Item(i)
-            Dim processty As String
-            processty = MyNewGeoSet.Name.Replace(fasternername + " - ", "")
-            If Strings.InStr(MyNewGeoSet.Name, "RESYNCING") Then
-
-                For j = 1 To MyNewGeoSet.HybridBodies.Count
-                    Dim MyNew2GeoSet As HybridBody
-                    MyNew2GeoSet = MyNewGeoSet.HybridBodies.Item(j)
-
-                    Dim tmplist2 As New List(Of HybridShape)
-
-                    Dim processty2 As String
-                    processty2 = MyNew2GeoSet.Name
-                    For l = 1 To MyNew2GeoSet.HybridShapes.Count
-
-                        fastenertree(processty + " - " + processty2).Add(MyNew2GeoSet.HybridShapes.Item(l))
+    '        MyNewGeoSet = myGeoSet.HybridBodies.Item(i)
 
 
+    '        If iffiltervis Then
+    '            Dim State
+    '            Dim selection1 As Selection
+    '            selection1 = CATIA.ActiveDocument.Selection
+    '            selection1.Add(MyNewGeoSet)
+    '            Dim oVisProps = CATIA.ActiveDocument.Selection.VisProperties
+    '            oVisProps.GetShow(State)
+
+    '            If State = 1 Then
+    '                Continue For
+    '            End If
+    '            '   If selection1.VisProperties.
+    '        End If
 
 
+    '        Dim processty As String
+    '        processty = MyNewGeoSet.Name.Replace(fasternername + " - ", "")
+    '        If Strings.InStr(MyNewGeoSet.Name, "RESYNCING") Then
 
-                    Next
+    '            For j = 1 To MyNewGeoSet.HybridBodies.Count
+    '                Dim MyNew2GeoSet As HybridBody
+    '                MyNew2GeoSet = MyNewGeoSet.HybridBodies.Item(j)
 
-                    '  fastenertree(processty + ";" + processty2).AddRange(tmplist2)
+    '                Dim tmplist2 As New List(Of HybridShape)
 
+    '                Dim processty2 As String
+    '                processty2 = MyNew2GeoSet.Name
+    '                For l = 1 To MyNew2GeoSet.HybridShapes.Count
 
-                Next
-
-
-
-
-            Else
-                ' Dim tmplist As New List(Of HybridShape)
-                For k = 1 To MyNewGeoSet.HybridShapes.Count
-
-                    fastenertree(processty).Add(MyNewGeoSet.HybridShapes.Item(k))
-
-                Next
-                ' fastenertree(processty).AddRange(tmplist)
-            End If
-        Next
+    '                    fastenertree(processty + " - " + processty2).Add(MyNew2GeoSet.HybridShapes.Item(l))
 
 
 
 
 
-    End Sub
+    '                Next
+
+    '                '  fastenertree(processty + ";" + processty2).AddRange(tmplist2)
+
+
+    '            Next
+
+
+
+
+    '        Else
+    '            ' Dim tmplist As New List(Of HybridShape)
+    '            For k = 1 To MyNewGeoSet.HybridShapes.Count
+
+    '                fastenertree(processty).Add(MyNewGeoSet.HybridShapes.Item(k))
+
+    '            Next
+    '            ' fastenertree(processty).AddRange(tmplist)
+    '        End If
+    '    Next
+
+
+
+
+
+    'End Sub
     Public Function getfast(processty As String) As List(Of HybridShape)
 
 

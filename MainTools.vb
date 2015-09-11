@@ -87,7 +87,7 @@ Public Class MainTools
     Private Sub UserForm1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
 
         CATIA = TVA_Method.loadCATIA()
-
+        CATIA.Visible = True
         lookuptable_path.Text = My.Settings.templateTVAPath
 
         'initial the fasterner list,if it can not be fetched from database,then load it via exceltable
@@ -904,6 +904,13 @@ Public Class MainTools
         defTVAModel.setHide(ifshow, source)
 
     End Sub
+    Private Sub modelini()
+
+        defTVAModel.PilotHoles = opGeo
+        defTVAModel.pointGeo = rootGeoSet.Text
+        defTVAModel.FstList = FastNames_
+
+    End Sub
     Private Sub showHideAllHelper(ifshow As Boolean)
         Dim ss = New processTreeBase
         For Each rr As String In ss.firsttree
@@ -996,5 +1003,14 @@ Public Class MainTools
 
     Private Sub Button10_Click(sender As Object, e As EventArgs) Handles Button10.Click
         showHideAllHelper(False)
+    End Sub
+
+    Private Sub Button11_Click(sender As Object, e As EventArgs) Handles Button11.Click
+        modelini()
+
+        Dim dd = defTVAModel.TVAVisTreeList.output_fst()
+
+        DataGridView1.DataSource = dd.output_dt()
+
     End Sub
 End Class

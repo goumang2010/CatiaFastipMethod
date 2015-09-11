@@ -147,6 +147,29 @@ Public Class TVA_Method
 
     End Sub
 
+    Public Shared Function ifGeoVis(geo As Object) As Boolean
+
+
+
+        Dim State
+        Dim selection1 As Selection
+        selection1 = geo.Application.ActiveDocument.Selection
+        selection1.Clear()
+        selection1.Add(geo)
+        Dim oVisProps = selection1.VisProperties
+        oVisProps.GetShow(State)
+        If State <> 1 Then
+            Return True
+        Else
+            Return False
+
+        End If
+
+    End Function
+
+
+
+
     Public Shared Function loadCATIA() As Application
         Dim CATIA = Nothing
         Try
@@ -265,7 +288,7 @@ Public Class TVA_Method
 
     End Property
 
-    Public Property TVATreeList As processTreeList
+    Public Property TVATreeList() As processTreeList
 
 
         Get
@@ -279,6 +302,22 @@ Public Class TVA_Method
                 Return tree
 
             End If
+
+        End Get
+        Set(value As processTreeList)
+            tree = value
+        End Set
+    End Property
+    Public Property TVAVisTreeList As processTreeList
+
+
+        Get
+
+
+
+
+            Return treeList_obj(True)
+
 
         End Get
         Set(value As processTreeList)
@@ -888,10 +927,12 @@ Public Class TVA_Method
 
 
 
-    Public Function treeList_obj() As processTreeList
+    Public Function treeList_obj(Optional iffilvis As Boolean = False) As processTreeList
 
         Dim aa As New processTreeList
-        aa.inputShape(pilot_geoset(), FstList)
+        aa.FastList = FstList
+        aa.inputShape(pilot_geoset(), iffilvis)
+
         Return aa
 
     End Function
