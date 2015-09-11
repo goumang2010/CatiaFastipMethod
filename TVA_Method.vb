@@ -2225,7 +2225,7 @@ Public Class TVA_Method
         sourcepplist = TVAPoints
 
 
-        Dim SP01s_ = New CENSP01s(SPProducts.Values.AsEnumerable(), FstList)
+        Dim SP01s_ = New CENSP01s(SPProducts.Values.AsEnumerable())
 
 
 

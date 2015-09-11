@@ -354,7 +354,7 @@ Public Class MainTools
                 Dim allpts = sorpart.noTreePoints()
 
                 MsgLabel.Text = "Extracting the SP models"
-                Dim SP01 = New CENSP01s(SPProducts.Values.AsEnumerable(), FastNames_)
+                Dim SP01 = New CENSP01s(SPProducts.Values.AsEnumerable())
                 MsgLabel.Text = "Matching the Fasterner Name"
                 Dim rspts = allpts.compare(SP01)(0)
                 MsgLabel.Text = "Converting to process tree"
@@ -791,7 +791,7 @@ Public Class MainTools
             sourcepplist = sorpart.TVAPoints
 
             MsgLabel.Text = "Extracting the SP models"
-            Dim SP01s_ = New CENSP01s(SPProducts.Values.AsEnumerable(), FastNames_)
+            Dim SP01s_ = New CENSP01s(SPProducts.Values.AsEnumerable())
 
             MsgLabel.Text = "Comparing fasterners"
             Dim filename = SourceTVABox.Text

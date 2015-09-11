@@ -7,7 +7,7 @@ Public Class CENSP01s
 
 
     Private SP01_ As New Dictionary(Of String, CENSP01)
-    Public FastNames_ As List(Of String)
+    '  Public FastNames_ As List(Of String)
     'comment
 
     '
@@ -49,8 +49,8 @@ Public Class CENSP01s
         Item2 = SP01_.Values(Index - 1)
 
     End Function
-    Public Sub New(ByRef SPProducts As IEnumerable(Of Product), fstlist As List(Of String))
-        FastNames_ = fstlist
+    Public Sub New(ByRef SPProducts As IEnumerable(Of Product))
+        ' FastNames_ = fstlist
 
 
         walk(SPProducts)
@@ -94,7 +94,7 @@ Public Class CENSP01s
 
 
                 'Make sure it is a legit fastener
-                If FastNames_.Contains(FastenerName) Then
+                If FastenerName.Contains("-") And (FastenerName.Length = 13 Or FastenerName.Length = 14) Then
 
                     'Go through each component
                     Dim k
