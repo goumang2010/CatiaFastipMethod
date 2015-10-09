@@ -68,13 +68,13 @@ Public Class processTreeList
 
 
 
-        If (FastList.Contains(MyGeoSet.Name)) Then
-                Add(New processTree(MyGeoSet, iffilvis))
+        If (TVA_Method.ifFastener(MyGeoSet.Name)) Then
+            Add(New processTree(MyGeoSet, iffilvis))
 
 
-            Else
-                '  parproduct()
-                Dim k As Integer
+        Else
+            '  parproduct()
+            Dim k As Integer
 
                 For k = 1 To MyGeoSet.HybridBodies.Count
                     '开始递归

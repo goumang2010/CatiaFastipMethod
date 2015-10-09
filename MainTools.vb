@@ -504,7 +504,7 @@ Public Class MainTools
             Dim conversps As Dictionary(Of String, Object)
             searchDic = New Dictionary(Of String, HybridShape)
 
-            conversps = aa.CheckTVA(database:=False, color:=ifcolor.Checked, ifreport:=ifrpt).Points_
+            conversps = aa.CheckTVA(database:=ifdt.Checked, color:=ifcolor.Checked, ifreport:=ifrpt).Points_
 
 
             For Each item In conversps
@@ -525,11 +525,11 @@ Public Class MainTools
 
 
 
-        If ifdt.Checked Then
+        'If ifdt.Checked Then
 
-            aa.updatedt()
+        '    aa.updatedt()
 
-        End If
+        'End If
     End Sub
 
     Private Sub Button4_Click(sender As Object, e As EventArgs) Handles Button4.Click
@@ -990,7 +990,7 @@ Public Class MainTools
         Else
             rootGeoSet.Text = selection1.Item(1).Value.Name
             opGeo = selection1.Item(1).Value
-
+            defTVAModel.PilotHoles = opGeo
         End If
 
         Me.Show()

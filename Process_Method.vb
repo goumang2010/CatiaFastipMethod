@@ -78,13 +78,13 @@ Public Class Process_Method
             Catch ex2 As Exception
 
 
-                Try
-                    CATIA = CreateObject("CATIA.Application")
-                    ' CATIA.Visible = True
-                Catch ex3 As Exception
-                    MsgBox("you have not installed CATIA/DELMIA,so you can't operate TVA by the tools! ")
+                'Try
+                '    CATIA = CreateObject("CATIA.Application")
+                '    ' CATIA.Visible = True
+                'Catch ex3 As Exception
+                MsgBox("you have not installed CATIA/DELMIA,so you can't operate TVA by the tools! ")
 
-                End Try
+                'End Try
 
             End Try
 
@@ -565,8 +565,17 @@ Public Class Process_Method
                 'Dim zzr As Integer = Math.Round(CDec(cc(2).Remove(0, 2)), 0)
                 Dim uuid_ = cc(0).Remove(0, 2) + "_" + cc(1).Remove(0, 2) + "_" + cc(2).Remove(0, 2)
 
+                Dim foundpt = tmppt.Item(uuid_)
 
-                tmppt.Item(uuid_).PFname = pp.Name
+                If Not foundpt Is Nothing Then
+                    tmppt.Item(uuid_).PFname = pp.Name
+                Else
+
+                    MsgBox("Please restore inital state of Product and try again!")
+                    Return Nothing
+
+                End If
+
 
                 Dim processinfo = pp.EventParameter("E_FASTENER_PROCFEAT", "Op_Type")
                 Dim processstr = processinfo.ValueEnum

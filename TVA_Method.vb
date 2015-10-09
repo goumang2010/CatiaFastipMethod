@@ -1603,7 +1603,7 @@ Public Class TVA_Method
         Dim shapecount As Integer
         Dim tempstring As String
 
-        If (FstList.Contains(MyGeoSet.Name)) Then
+        If TVA_Method.ifFastener(MyGeoSet.Name) Then
 
             '紧固件列表
             fastenerqty.Add(0, MyGeoSet.Name)
@@ -1729,7 +1729,7 @@ Public Class TVA_Method
 
                                 End If
 
-                                End If
+                            End If
 
                         End If
 
@@ -1876,7 +1876,8 @@ Public Class TVA_Method
 
                                             selection1.VisProperties.SetRealColor(64, 32, 32, 1)
                                         Else
-                                            selection1.VisProperties.SetRealColor(128, 64, 0, 1)
+                                            'Make protruding head 6# darker
+                                            selection1.VisProperties.SetRealColor(64, 32, 0, 1)
                                         End If
                                     End If
 
@@ -2044,7 +2045,16 @@ Public Class TVA_Method
 
 
 
+
+
+
     End Function
+
+    Public Shared Function ifFastener(name As String) As Boolean
+        Return (name.Contains("-") And (name.Length = 13 Or name.Length = 14)) And (name.Contains("AD") Or name.Contains("AG"))
+    End Function
+
+
     Sub setHide(ifshow As Boolean, proctype As String)
         hbtree = New List(Of HybridBody)()
 

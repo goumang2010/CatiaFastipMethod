@@ -94,7 +94,7 @@ Public Class CENSP01s
 
 
                 'Make sure it is a legit fastener
-                If FastenerName.Contains("-") And (FastenerName.Length = 13 Or FastenerName.Length = 14) Then
+                If TVA_Method.ifFastener(FastenerName) Then
 
                     'Go through each component
                     Dim k

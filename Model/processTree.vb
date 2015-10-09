@@ -85,23 +85,23 @@ Public Class processTree : Inherits processTreeBase
                         'test if visible
 
 
-                        If iffiltervis Then
-                            Dim State
-                            Dim selection1 As Selection
-                            selection1 = CATIA.ActiveDocument.Selection
-                            selection1.Clear()
-                            selection1.Add(MyNew2GeoSet.HybridShapes.Item(1))
-                            Dim oVisProps = selection1.VisProperties
-                            oVisProps.GetShow(State)
+                        'If iffiltervis Then
+                        '    Dim State
+                        '    Dim selection1 As Selection
+                        '    selection1 = CATIA.ActiveDocument.Selection
+                        '    selection1.Clear()
+                        '    selection1.Add(MyNew2GeoSet.HybridShapes.Item(1))
+                        '    Dim oVisProps = selection1.VisProperties
+                        '    oVisProps.GetShow(State)
 
-                            If State = 1 Then
-                                'if any point is hidden,then skip all points in the geo
-                                Continue For
+                        '    If State = 1 Then
+                        '        'if any point is hidden,then skip all points in the geo
+                        '        Continue For
 
 
-                            End If
-                            '   If selection1.VisProperties.
-                        End If
+                        '    End If
+                        '    '   If selection1.VisProperties.
+                        'End If
 
 
 
@@ -425,7 +425,7 @@ Public Class processTree : Inherits processTreeBase
             Else
 
 
-                selection_fstcolor.VisProperties.SetRealColor(128, 64, 0, 1)
+                selection_fstcolor.VisProperties.SetRealColor(64, 32, 0, 1)
             End If
         End If
 
