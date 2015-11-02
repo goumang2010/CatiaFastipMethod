@@ -23,20 +23,8 @@ Public Class TVA_Method
     Dim hbtree As List(Of HybridBody)
     Public filename As String = ""
     Public pointGeo As String = "Pilot_Holes"
-
-    'For check TVA
-    Dim bugcontainer As processStatic
-    Dim wrongstatistic As processStatic
-    Dim fastenerqty As processStatic
-    Dim processtype As processStatic
-    Dim checkTVApoint As processStatic
-    Dim processtree As processTreeBase
     Dim Fst_List As List(Of String) = Nothing
 
-
-    'For generate no tree points
-    Dim tmppoints As CENPoints
-    Dim tmplines As List(Of HybridShape)
 
 
     Public Property FstList As List(Of String)
@@ -53,6 +41,42 @@ Public Class TVA_Method
             Fst_List = value
         End Set
     End Property
+
+    Public Property bugList As Dictionary(Of String, HybridShape)
+
+        Get
+            Dim f As MainTools = localMethod.get_Form("MainTools")
+            If f Is Nothing Then
+                f = New MainTools()
+
+
+            End If
+
+
+            Return f.showPoints
+
+        End Get
+        Set(value As Dictionary(Of String, HybridShape))
+
+            Dim f As MainTools = localMethod.get_Form("MainTools")
+            If f Is Nothing Then
+                f = New MainTools()
+
+
+            End If
+
+            Dim aa = f.showPoints
+            For Each pp In value
+
+                aa.Add(pp.Key, pp.Value)
+            Next
+            f.showPoints = aa
+
+
+
+        End Set
+    End Property
+
 
 
     'Dim Points_ As New CENPoints()
@@ -397,12 +421,7 @@ Public Class TVA_Method
 
 
                 opgeoset = tmptree.getnextGeo(opgeoset, tmptreestr(1) + " - " + tmptreestr(2))
-                ' opgeoset.HybridBodies.GetItem(tmptree(1) + " - " + tmptree(2))
 
-
-                'Else
-
-                '    opgeoset = fastgeoset.HybridBodies.GetItem(fasternername + " - " + tmptree(0))
 
 
             End If
@@ -423,6 +442,7 @@ Public Class TVA_Method
         Dim tmppoints = New List(Of HybridShape)()
         Dim tmplines = New List(Of HybridShape)()
         Dim oplist As List(Of HybridShape)
+        Dim bugpoints As New Dictionary(Of String, HybridShape)
         ' Dim PointsFatherProduct As Product
         '找到product文档的根product
         'part与partDocument为父子关系，product之间为父子关系，所以只能通过文件路径匹配进行配对
@@ -437,33 +457,47 @@ Public Class TVA_Method
         oplist = kkk.Value
         For Each hs As HybridShape In oplist
             '判断点
-            If TVA_Method.CheckHybridShapeItem(hs) Then
+            If hs.Name = "test5" Then
 
-                tmppoints.Add(hs)
+                Console.Write("test5")
+            End If
+
+
+            Dim shapesort = TVA_Method.CheckHybridShapeItem(hs)
+            If shapesort Is Nothing Then
+                'Just delete it  in fix process
+                onetypepoints.wrongpoints.Add(hs)
             Else
+                If shapesort Then
+                    tmppoints.Add(hs)
+                Else
+                    tmplines.Add(hs)
+                End If
 
-                tmplines.Add(hs)
+
             End If
 
         Next
         If (ifvec = True) Then
+            Dim i As Integer = 0
+            Do While (i < tmppoints.Count)
+                Dim success As Boolean = False
+                Dim pp = tmppoints.ElementAt(i)
 
-            For Each pp As HybridShape In tmppoints
                 'Get the SPAWorkbench from the measurement
                 Dim SPAWorkb As Workbench
-                Dim Measurement
-                Dim Coords(2) As Object
+                    Dim Measurement
+
 
 
                 SPAWorkb = CATIA.ActiveDocument.GetWorkbench("SPAWorkbench")
 
-                'Get the measurement for the point
-                Measurement = SPAWorkb.GetMeasurable(pp)
+                    'Get the measurement for the point
+                    Measurement = SPAWorkb.GetMeasurable(pp)
+                    Dim j As Integer = 0
+                Do While (j < tmplines.Count)
 
-                'Get the coordinates (Part based) from this point
-                Call Measurement.GetPoint(Coords)
-
-                For Each ppk As HybridShape In tmplines
+                    Dim ppk = tmplines.ElementAt(j)
 
 
                     'Get the SPAWorkbench from the measurement
@@ -475,31 +509,42 @@ Public Class TVA_Method
 
                     'Now get the XYZ of the point
                     '允许录入点线不重合的法向
-                    If MinimumDistance2 < 5 Then
+                    If MinimumDistance2 < 1 Then
                         '当part存在时，将会录入Product坐标系的skin part坐标
-
-
-
                         If coordswitch Then
                             onetypepoints.Add(LeaftoPoint(pp, ppk, fasternername, kkk.Key, framename, pp.Name))
                         Else
-
                             onetypepoints.Add(LeaftoPoint(pp, fasternername, kkk.Key, framename, pp.Name, ppk))
-
                         End If
-
-
-
-
                         '找到后，把该项移除
                         tmplines.Remove(ppk)
-                        Exit For
+                        'tmppoints.Remove(pp)
+                        success = True
+                        Exit Do
+                    Else
+
+                        j = j + 1
+                    End If
+
+                Loop
+                If Not success Then
+                    Dim tpt = LeaftoPoint(pp, "", "", "", "")
+                    If onetypepoints.Contains(tpt) Then
+                        onetypepoints.dupli.Add(tpt)
+                    Else
+                        bugpoints.Add(i.ToString() + "_singlepoints_" + pp.Name, pp)
 
                     End If
 
-                Next
+                End If
 
-            Next
+
+                i = i + 1
+
+            Loop
+            'Add single points and lines to specified lists
+            onetypepoints.singleline.AddRange(tmplines)
+
         Else
 
             If coordswitch Then
@@ -521,6 +566,12 @@ Public Class TVA_Method
         End If
 
         onetypepoints.hb = opgeoset
+
+
+        If (bugpoints.Count > 0) Then
+            bugList = bugpoints
+        End If
+
 
         Return onetypepoints
 
@@ -571,20 +622,6 @@ Public Class TVA_Method
         Call PointTransformation.SetByArrayV(Coords)
         PointTransformation = ProductTransformation.MulVec(PointTransformation)
         MyPoint.update("", framename, processtype, PointObj, vector, PointTransformation.cx, PointTransformation.cy, PointTransformation.cz, fastenername, pointname)
-
-
-
-
-
-
-        'Else
-
-        '    MyPoint.update("", framename, processtype, PointObj, vector, Coords(0), Coords(1), Coords(2), fastenername, pointname)
-        'End If
-        ' MyPoint.update("", framename, processtype, Nothing, Nothing, PointTransformation.cx, PointTransformation.cy, PointTransformation.cz, fastenername)
-        ' MyPoint.update("", framename, processtype, PointObj, vector, Coords(0), Coords(1), Coords(2), fastenername, pointname)
-        'Add data to a collection
-        ' Points_.Add(MyPoint)
 
         Return MyPoint
 
@@ -712,13 +749,86 @@ Public Class TVA_Method
         '需要坐标转化
 
         points = New CENPoints()
-        tmppoints = New CENPoints()
-        tmplines = New List(Of HybridShape)
-        walk(geoset)
+        Dim tmppoints = New CENPoints()
+        Dim tmplines = New List(Of HybridShape)
+        Dim walkHB As Action(Of HybridBody)
+        walkHB = Sub(hbb As HybridBody)
+                     For Each bb In hbb.HybridBodies
+                         walkHB(bb)
+                     Next
+                     'After lookthrough every sub-hybody,try to pair the non-paired points and lines
+                     If hbb.HybridShapes.Count > 1 Then
+                         Dim State
+                         Dim myselection
+                         Dim oVisProps
+                         myselection = CATIA.ActiveDocument.Selection
+                         Dim tmppoints2 = New CENPoints()
+                         Dim tmplines2 = New List(Of HybridShape)
+                         For Each hs As HybridShape In hbb.HybridShapes
+
+                             myselection.Clear()
+                             myselection.Add(hs)
+                             oVisProps = CATIA.ActiveDocument.Selection.VisProperties
+                             oVisProps.GetShow(State)
+                             'If State = 1 Then
+                             '    State1 = "Hidden"
+                             'Else
+                             '    State1 = "Shown"
+                             'End If
+
+                             If State <> 1 Then
+
+                                 '判断点
+                                 If CheckHybridShapeItem(hs) Then
+                                     'For using cenpoints to filter duplicate points or lines
+                                     tmppoints2.Add(LeaftoPoint(hs, "", "", "", ""))
+                                 Else
+                                     Dim hstype = TypeName(hs)
+                                     If hstype.Contains("HybridShapeLine") Then
+                                         tmplines2.Add(hs)
+                                     End If
+                                 End If
+                             End If
+
+                         Next
+
+                         Dim todelpts As New List(Of HybridShape)()
+                         Dim pairedDic = Pair_pt(tmppoints2, tmplines2, hbb.Name)
+                         'Remove the points that have been paired
+                         For Each pp In pairedDic
+
+                             tmppoints2.Remove(pp.Key)
+                             tmplines2.Remove(pp.Value)
+
+                         Next
+
+                         'For non-paired points and lines,add them to global var
+                         tmppoints.Merge(tmppoints2)
+                         tmplines.AddRange(tmplines2)
+
+
+                         'MsgBox(hbb.Name)
+                         'Dim hbc = hbb.HybridBodies.Count
+                     End If
+
+
+
+
+
+
+
+
+                 End Sub
+
+
+
+
+
+        walkHB(geoset)
         'Check all non paired points and lines
 
         Pair_pt(tmppoints, tmplines, "SB_ENG")
-        Return points
+                                                  Return points
 
 
 
@@ -811,104 +921,6 @@ Public Class TVA_Method
 
 
 
-
-    Public Sub walk(ByRef hbb As HybridBody)
-        For Each bb In hbb.HybridBodies
-            walk(bb)
-
-        Next
-                'After lookthrough every sub-hybody,try to pair the non-paired points and lines
-        If hbb.HybridShapes.Count > 1 Then
-
-
-            Dim State
-            Dim myselection
-            Dim oVisProps
-            myselection = CATIA.ActiveDocument.Selection
-
-
-
-
-
-
-
-
-
-
-
-
-            Dim tmppoints2 = New CENPoints()
-            Dim tmplines2 = New List(Of HybridShape)
-            For Each hs As HybridShape In hbb.HybridShapes
-
-                myselection.Clear()
-                myselection.Add(hs)
-                oVisProps = CATIA.ActiveDocument.Selection.VisProperties
-                oVisProps.GetShow(State)
-                'If State = 1 Then
-                '    State1 = "Hidden"
-                'Else
-                '    State1 = "Shown"
-                'End If
-
-                If State <> 1 Then
-
-
-
-                    '判断点
-                    If CheckHybridShapeItem(hs) Then
-                        'For using cenpoints to filter duplicate points or lines
-                        tmppoints2.Add(LeaftoPoint(hs, "", "", "", ""))
-                    Else
-                        Dim hstype = TypeName(hs)
-                        If hstype.Contains("HybridShapeLine") Then
-                            tmplines2.Add(hs)
-                        End If
-
-                        'If TypeName(hs) = "HybridShapeLineNormal" Or TypeName(hs) = "HybridShapeLineExplicit" Then
-
-
-                    End If
-                    End If
-
-            Next
-
-            Dim todelpts As New List(Of HybridShape)()
-
-
-            Dim pairedDic = Pair_pt(tmppoints2, tmplines2, hbb.Name)
-
-
-
-            'Remove the points that have been paired
-            For Each pp In pairedDic
-
-                tmppoints2.Remove(pp.Key)
-                tmplines2.Remove(pp.Value)
-
-            Next
-
-
-
-            'For non-paired points and lines,add them to global var
-            tmppoints.Merge(tmppoints2)
-            tmplines.AddRange(tmplines2)
-
-
-            'MsgBox(hbb.Name)
-            'Dim hbc = hbb.HybridBodies.Count
-        End If
-
-
-
-
-
-
-
-    End Sub
-
-
-
     '保存文件
 
     Public Sub save()
@@ -970,15 +982,15 @@ Public Class TVA_Method
 
 
     End Function
-    Public Function out_surf(Optional geoname As String = "NC_Geometry") As List(Of HybridShapeExtract)
+    Public Function out_surf(Optional geoname As String = "NC_Geometry") As List(Of HybridShape)
 
-        Dim aa As New List(Of HybridShapeExtract)
+        Dim aa As New List(Of HybridShape)
         '     pointGeo = geoname
         ' If OuterSurface Is Nothing Then
         Dim NCGeo = Part.HybridBodies.Item(geoname)
         For Each kk In NCGeo.HybridShapes
 
-            If TypeName(kk) = "HybridShapeExtract" Then
+            If TypeName(kk) = "HybridShapeExtract" Or TypeName(kk) = "HybridShapeAssemble" Then
                 aa.Add(kk)
 
             End If
@@ -992,8 +1004,10 @@ Public Class TVA_Method
 
     End Function
 
-    Public Function fix_all() As processStatic
+    Public Function fix_all(Optional closeAfter As Boolean = True) As processStatic
 
+        ifvec = True
+        coordswitch = False
 
         Dim aa = New processStatic()
         aa.Add("Fix outlines/dupli", filename)
@@ -1005,7 +1019,10 @@ Public Class TVA_Method
             aa.Add(ppp.fix_outlines(filename, out_surf()))
             aa.Add(ppp.del_dupli(filename))
         Next
-        save()
+        If closeAfter Then
+            save()
+        End If
+
         Return aa
     End Function
 
@@ -1040,265 +1057,1154 @@ Public Class TVA_Method
 
 
     Public Function CheckTVA(Optional ByVal color As Boolean = True, Optional ByVal database As Boolean = True, Optional FastList As List(Of String) = Nothing, Optional ifreport As Boolean = True) As processStatic
-        wrongstatistic = New processStatic()
-        fastenerqty = New processStatic()
-        processtype = New processStatic()
-        checkTVApoint = New processStatic()
-        processtree = New processTreeBase()
-        bugcontainer = New processStatic()
+        Dim wrongstatistic = New processStatic()
+        Dim fastenerqty = New processStatic()
+        Dim processtype = New processStatic()
+        Dim checkTVApoint = New processStatic()
+        Dim processtree = New processTreeBase()
+        Dim bugcontainer = New processStatic()
+
+
+        'Use delegate to recurse
+
+        'Dim MyGeoSet = pilot_geoset()
+        Dim CheckRecursion As Action(Of HybridBody)
+
+        CheckRecursion = Sub(MyGeoSet As HybridBody)
+
+                             ' CATIA = MyGeoSet.Application
+
+
+                             '2015.5.12进行重构，与界面元素相分离
+                             Dim buglocation As String
+
+                             Dim MySourceGeoSet As HybridBody
+                             Dim shapecount As Integer
+                             Dim tempstring As String
+
+                             If TVA_Method.ifFastener(MyGeoSet.Name) Then
+
+                                 '紧固件列表
+                                 fastenerqty.Add(0, MyGeoSet.Name)
+
+
+
+                                 Dim i
+                                 '开始遍历紧固件的下层几何图形集
+                                 For i = 1 To MyGeoSet.HybridBodies.Count
+
+
+                                     Dim MyNewGeoSet As HybridBody
+
+                                     MyNewGeoSet = MyGeoSet.HybridBodies.Item(i)
+
+                                     MySourceGeoSet = MyNewGeoSet
+
+                                     '计算该几何图形集中点的数量
+                                     shapecount = Fix(MySourceGeoSet.HybridShapes.Count / 2)
+
+
+
+                                     '判断几何图形集下是否有奇数个shape ,若有，则报错
+                                     If (MySourceGeoSet.HybridShapes.Count / 2 - shapecount) <> 0 Then
+                                         shapecount = shapecount + 1
+                                         buglocation = MySourceGeoSet.Parent.Parent.name + " - " + MySourceGeoSet.Name
+
+                                         wrongstatistic.Add(shapecount, "error in qty of point and line" + " - " + buglocation)
+
+                                         '以下过程找出孤立的点，并加入到bug列表中
+                                         bugcontainer.Add(Checkvector(MySourceGeoSet, buglocation))
+                                     End If
+
+                                     '  Checkdupli MySourceGeoSet
+                                     If Strings.InStr(MyNewGeoSet.Name, "TEMP") And MyNewGeoSet.HybridShapes.Count <> 0 Then
+
+                                         wrongstatistic.Add(shapecount, "Something in Temp GeoSet" + " - " + MyGeoSet.Parent.name + " - " + MyNewGeoSet.Name)
+
+                                     End If
 
 
 
 
-        CheckTVA(pilot_geoset(), color)
+                                     If Strings.InStr(MyNewGeoSet.Name, "RESYNCING") Then
+
+                                         If MyNewGeoSet.HybridShapes.Count <> 0 Then
+                                             wrongstatistic.Add(shapecount, "Need select Target Type" + " - " + MyGeoSet.Parent.name + " - " + MyNewGeoSet.Name)
+
+                                         End If
+
+
+                                         Dim ii
+                                         For ii = 0 To 2
+
+
+
+                                             'Set MySourceGeoSet = MyNewGeoSet.HybridBodies.GetItem(UserForm1.ComboBox4.Items.Item(ii))
+                                             If (ifGeoExist(MyNewGeoSet, processtree.sectree(ii)) = False) Then
+
+                                                 MySourceGeoSet = MyNewGeoSet.HybridBodies.Add()
+                                                 MySourceGeoSet.Name = processtree.sectree(ii)
+                                             Else
+                                                 MySourceGeoSet = MyNewGeoSet.HybridBodies.GetItem(processtree.sectree(ii))
+
+                                             End If
+
+
+                                             If color Then
+
+                                                 Dim selection1 As Object
+
+
+                                                 selection1 = CATIA.ActiveDocument.Selection
+                                                 selection1.Clear()
+                                                 Dim zz
+                                                 For zz = 1 To MySourceGeoSet.HybridShapes.Count
+                                                     selection1.Add(MySourceGeoSet.HybridShapes.Item(zz))
+
+                                                 Next
+
+
+                                                 If Strings.InStr(MyNewGeoSet.Name, "RESYNCING ONLY") Then
+
+                                                     '红色
+                                                     selection1.VisProperties.SetRealColor(255, 0, 0, 1)
+                                                 Else
+                                                     '绿色
+                                                     selection1.VisProperties.SetRealColor(0, 128, 64, 1)
+
+                                                 End If
+
+
+                                                 If Strings.InStr(MySourceGeoSet.Name, "Final") Then
+
+
+
+                                                     '  selection1.VisProperties.SetSymbolType(6)
+                                                     If Strings.InStr(MyGeoSet.Name, "B020600") Then
+                                                         '设为大圆
+                                                         selection1.VisProperties.SetSymbolType(3)
+                                                     Else
+
+                                                         '设为十字
+                                                         selection1.VisProperties.SetSymbolType(2)
+                                                     End If
+                                                 Else
+                                                     If Strings.InStr(MySourceGeoSet.Name, "Fast Tack") Then
+                                                         '星号
+                                                         selection1.VisProperties.SetSymbolType(7)
+
+                                                     Else
+                                                         '同心圆
+
+                                                         If Strings.InStr(MyNewGeoSet.Name, "DRILL") Then
+
+                                                             selection1.VisProperties.SetSymbolType(5)
+                                                         Else
+
+                                                             selection1.VisProperties.SetSymbolType(4)
+
+                                                         End If
+
+
+                                                     End If
+
+                                                 End If
+
+                                             End If
+
+
+                                             '检查校准的几何图形集
+
+
+
+                                             'If database Then
+
+
+                                             '    ' buglocation = MyGeoSet.Parent.name + " - " + MyNewGeoSet.Name + " - " + MySourceGeoSet.Name
+                                             '    updatedatabase(MySourceGeoSet, MyGeoSet.Parent.name, MyGeoSet.Name, Strings.Split(MyNewGeoSet.Name, " - ")(1) + " - " + MySourceGeoSet.Name)
+                                             'End If
+
+
+
+                                             shapecount = Fix(MySourceGeoSet.HybridShapes.Count / 2)
+                                             'MsgBox MySourceGeoSet.name
+
+
+
+                                             If (MySourceGeoSet.HybridShapes.Count / 2 - shapecount) <> 0 Then
+                                                 shapecount = shapecount + 1
+                                                 buglocation = MyGeoSet.Parent.name + " - " + MyNewGeoSet.Name + " - " + MySourceGeoSet.Name
+
+
+                                                 wrongstatistic.Add(shapecount, "error in qty of point and line" + " - " + buglocation)
+
+
+                                                 bugcontainer.Add(Checkvector(MySourceGeoSet, buglocation))
+
+                                             End If
+
+                                             tempstring = Strings.Trim(Strings.Split(MyNewGeoSet.Name, " - ")(1)) + "-" + Strings.Trim(Strings.Split(MySourceGeoSet.Name, " - ")(1))
+
+                                             checkTVApoint.Add(shapecount, MyNewGeoSet.Name + "-" + Strings.Trim(Strings.Split(MySourceGeoSet.Name, " - ")(1)))
+
+                                             '统计各个紧固件数量Fastener_Qty
+                                             fastenerqty.Add(shapecount, MyGeoSet.Name)
+                                             processtype.Add(shapecount, tempstring)
+
+                                         Next
+
+                                     Else
+
+                                         '不为resync
+                                         '检查非校准的几何图形集
+                                         If (MyNewGeoSet.Name.Contains("AUTOMATED FASTENING") Or MyNewGeoSet.Name.Contains("TEMP")) Then
+
+
+
+                                             'If database Then
+
+                                             '    updatedatabase(MyNewGeoSet, MyGeoSet.Parent.name, MyGeoSet.Name, Strings.Split(MyNewGeoSet.Name, " - ")(1))
+                                             'End If
+
+                                             If color Then
+
+                                                 Dim selection1 As Object
+
+                                                 selection1 = CATIA.ActiveDocument.Selection
+                                                 selection1.Clear()
+                                                 Dim zzz
+                                                 For zzz = 1 To MyNewGeoSet.HybridShapes.Count
+                                                     selection1.Add(MyNewGeoSet.HybridShapes.Item(zzz))
+
+                                                 Next
+
+
+
+                                                 If Strings.InStr(MyNewGeoSet.Name, "BY") Then
+
+
+                                                     If Strings.InStr(MyGeoSet.Name, "5-") Then
+
+                                                         If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
+                                                             '蓝色
+                                                             selection1.VisProperties.SetRealColor(0, 0, 255, 1)
+                                                         Else
+                                                             selection1.VisProperties.SetRealColor(0, 255, 255, 1)
+                                                         End If
+
+                                                     Else
+                                                         '棕色
+
+                                                         If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
+
+                                                             selection1.VisProperties.SetRealColor(128, 64, 64, 1)
+                                                         Else
+                                                             selection1.VisProperties.SetRealColor(255, 128, 0, 1)
+                                                         End If
+                                                     End If
+
+
+
+                                                     If Strings.InStr(MyNewGeoSet.Name, "INSTALL") Then
+                                                         If Strings.InStr(MyGeoSet.Name, "B020600") Then
+                                                             '设为大圆
+                                                             selection1.VisProperties.SetSymbolType(3)
+                                                         Else
+
+                                                             '设为十字
+                                                             selection1.VisProperties.SetSymbolType(2)
+                                                         End If
+
+
+                                                         'selection1 = Nothing
+                                                     Else
+
+                                                         If Strings.InStr(MyNewGeoSet.Name, "DRILL") Then
+
+                                                             '设为实心圆
+                                                             selection1.VisProperties.SetSymbolType(5)
+
+                                                         End If
+
+                                                     End If
+                                                 Else
+
+
+                                                     If Strings.InStr(MyNewGeoSet.Name, "AFTER") Or Strings.InStr(MyNewGeoSet.Name, "TEMP") Then
+                                                         '符号为X
+                                                         'after 点为黑色
+                                                         selection1.VisProperties.SetRealColor(0, 0, 0, 1)
+                                                         selection1.VisProperties.SetSymbolType(1)
+                                                     Else
+
+                                                         If Strings.InStr(MyGeoSet.Name, "5-") Then
+                                                             '都改为深色
+
+                                                             If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
+                                                                 '紫色
+                                                                 selection1.VisProperties.SetRealColor(255, 0, 255, 1)
+                                                             Else
+                                                                 '深色
+                                                                 selection1.VisProperties.SetRealColor(255, 165, 0, 1)
+                                                             End If
+
+                                                         Else
+                                                             '棕色
+
+                                                             If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
+
+                                                                 selection1.VisProperties.SetRealColor(64, 32, 32, 1)
+                                                             Else
+                                                                 'Make protruding head 6# darker
+                                                                 selection1.VisProperties.SetRealColor(64, 32, 0, 1)
+                                                             End If
+                                                         End If
+
+                                                         If Strings.InStr(MyNewGeoSet.Name, "DRILL") Then
+                                                             selection1.VisProperties.SetSymbolType(4)
+                                                         Else
+
+                                                             If Strings.InStr(MyGeoSet.Name, "B020600") Then
+                                                                 '设为大圆
+                                                                 selection1.VisProperties.SetSymbolType(3)
+                                                             Else
+
+                                                                 '设为十字
+                                                                 selection1.VisProperties.SetSymbolType(2)
+                                                             End If
+
+                                                         End If
+
+                                                     End If
+
+
+
+
+                                                 End If
+
+
+                                             End If
+
+
+                                             If Strings.InStr(MyNewGeoSet.Name, " - ") Then
+
+                                                 tempstring = Strings.Trim(Strings.Split(MySourceGeoSet.Name, " - ")(1))
+                                                 checkTVApoint.Add(shapecount, MySourceGeoSet.Name)
+
+                                                 fastenerqty.Add(shapecount, MyGeoSet.Name)
+                                                 processtype.Add(shapecount, tempstring)
+                                             End If
+                                         Else
+                                             wrongstatistic.Add(shapecount, "error geoset" + " - " + MyNewGeoSet.Name + " - ")
+
+                                         End If
+                                     End If
+
+
+                                 Next
+
+                             Else
+                                 If MyGeoSet.HybridShapes.Count <> 0 Then
+                                     wrongstatistic.Add(shapecount, "keng brother bug" + " - " + MyGeoSet.Parent.name + " - " + MyGeoSet.Name)
+                                 End If
+
+                                 Dim k As Integer
+
+                                 For k = 1 To MyGeoSet.HybridBodies.Count
+                                     '开始递归
+                                     CheckRecursion(MyGeoSet.HybridBodies.Item(k))
+                                 Next
+                             End If
+
+
+
+
+
+
+                             '生产表格
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                         End Sub
+        CheckRecursion(pilot_geoset())
+
+        Dim ReportRecursion As Action
+
+        ReportRecursion = Sub()
+
+                              Dim rivottypename As String
+                              Dim sum As Integer
+                              Dim tempcount As Integer
+                              sum = 0
+                              Dim autosum As Integer
+                              autosum = 0
+                              Dim resynsum As Integer
+                              resynsum = 0
+
+
+                              Dim frconlyfinal As Integer
+                              frconlyfinal = 0
+
+                              Dim frconlyfastack As Integer
+                              frconlyfastack = 0
+
+                              Dim highlitesum As Integer
+                              highlitesum = 0
+                              Dim instodrill As Integer
+                              instodrill = 0
+                              '原始TVA就是仅仅钻孔的
+                              Dim orgdrill As Integer
+                              orgdrill = 0
+                              '高锁钻孔校准点数
+                              Dim highliteresyn As Integer
+                              highliteresyn = 0
+
+                              '校准插钉
+                              Dim highliterRC As Integer
+                              highliterRC = 0
+
+
+                              '仅校准导孔
+                              Dim FRChole As Integer
+                              FRChole = 0
+
+                              '校准导孔并安装
+                              Dim RChole As Integer
+                              RChole = 0
+
+
+                              '手铆和机器一共需用高锁数
+                              Dim highliteall As Integer
+                              highliteall = 0
+                              '手铆和机器下架补铆数
+                              Dim afterall As Integer
+                              afterall = 0
+                              '高锁下架补铆数
+                              Dim highafterall As Integer
+                              highafterall = 0
+
+                              '5号铆钉钻铆
+                              Dim fiverivet As Integer
+                              fiverivet = 0
+
+
+                              '5号高锁钻铆
+                              Dim fivehilite As Integer
+                              fivehilite = 0
+
+                              '5号高锁钻孔
+                              Dim fivedrill As Integer
+                              fivedrill = 0
+
+                              '6号高锁钻铆
+                              Dim sixhilite As Integer
+                              sixhilite = 0
+
+
+                              '6号高锁钻孔
+                              Dim sixdrill As Integer
+                              sixdrill = 0
+
+
+                              Dim excelobject As Object
+                              Dim wb As Object
+
+
+
+
+                              Dim m As Integer
+                              Dim n As Integer
+                              Dim p As Integer
+                              Dim fastextract As String
+                              Dim processextract As String
+                              Dim fastcount As Integer
+                              Dim proccesscount As Integer
+
+
+
+
+                              excelobject = CreateObject("excel.application") '启动Excel程序
+
+
+                              excelobject.Visible = True
+
+                              wb = excelobject.Workbooks.Add()
+                              excelobject.displayalerts = False
+                              fastcount = fastenerqty.count
+                              proccesscount = processtype.count
+
+                              wb.Sheets(1).Cells(1, fastcount + 2).Value = "总计"
+
+                              wb.Sheets(1).Cells(proccesscount + 2, 1).Value = "总计"
+                              '制作表头，添加统计数据
+                              For p = 1 To processtype.count
+                                  Dim processtypetmp As String
+
+                                  processtypetmp = processtype.Key(p)
+                                  processtypetmp = Strings.Replace(processtypetmp, " AUTOMATED FASTENING", "")
+
+
+                                  wb.Sheets(1).Cells(p + 1, 1).Value = processtypetmp
+
+                                  wb.Sheets(1).Cells(p + 1, fastcount + 2).Value = processtype.Item2(p)
+                              Next
+
+                              For n = 1 To fastcount
+                                  wb.Sheets(1).Cells(1, n + 1).Value = fastenerqty.Key(n)
+                                  wb.Sheets(1).Cells(proccesscount + 2, n + 1).Value = fastenerqty.Item2(n)
+                              Next
+
+
+                              Dim ff As Integer
+                              'For ff = 0 To buglistBox.Items.Count - 1
+                              '    If fastenerqty.InTheList(buglistBox.Items.Item(ff)) Then
+
+                              '        buglistBox.SetSelected(ff, True)
+                              '    Else
+                              '        buglistBox.SetSelected(ff, True)
+                              '    End If
+
+                              'Next
+
+                              wb.Sheets(1).Cells(1, 1).Value = "加工类型/紧固件"
+
+
+
+                              For m = 1 To checkTVApoint.count
+                                  rivottypename = checkTVApoint.Key(m)
+                                  tempcount = checkTVApoint.Item(rivottypename)
+                                  fastextract = Strings.Trim(Strings.Split(rivottypename, " - ")(0))
+                                  processextract = Strings.Trim(Strings.Split(rivottypename, " - ")(1))
+                                  Dim rownum As Integer
+                                  Dim colnum As Integer
+
+                                  rownum = processtype.SearchIndex(processextract) + 1
+                                  colnum = fastenerqty.SearchIndex(fastextract) + 1
+                                  wb.Sheets(1).Cells(rownum, colnum).Value = tempcount
+                                  'MsgBox (processextract)
+
+                                  If (InStr(rivottypename, "AFTER AUTOMATED FASTENING") Or InStr(rivottypename, "BEFORE AUTOMATED FASTENING")) Then
+
+                                      afterall = afterall + tempcount
+                                  End If
+
+
+
+                                  If (InStr(rivottypename, "RESYNCING")) Then 'aa
+                                      resynsum = resynsum + tempcount
+                                      '统计高锁校准点数
+                                      If (InStr(rivottypename, "B020600")) Then 'bb
+                                          highliteresyn = highliteresyn + tempcount
+                                          If (InStr(rivottypename, "INSTALLED")) Then
+                                              highliterRC = highliterRC + tempcount
+                                          End If
+                                      End If 'bb
+
+                                      If (InStr(rivottypename, "Pilot Holes")) Then 'cc
+
+                                          If (InStr(rivottypename, "ONLY")) Then
+
+                                              FRChole = FRChole + tempcount
+
+                                          Else
+                                              RChole = RChole + tempcount
+
+                                          End If
+
+                                      Else 'cc
+
+                                          If (InStr(rivottypename, "ONLY")) Then
+
+                                              If (InStr(rivottypename, "Final")) Then
+                                                  frconlyfinal = frconlyfinal + tempcount
+                                              Else
+                                                  frconlyfastack = frconlyfastack + tempcount
+                                              End If
+                                          End If
+
+
+                                      End If 'cc
+
+                                  Else 'aa
+
+
+                                      If (InStr(rivottypename, "BY AUTOMATED FASTENING")) Then 'a
+                                          If (InStr(rivottypename, "INSTALLED") Or InStr(rivottypename, "DRILL")) Then 'b
+                                              autosum = autosum + tempcount
+
+                                              If tempcount < 10 Then
+                                                  wb.Sheets(1).Cells(rownum, colnum).Interior.ColorIndex = 3 ' 背景的颜色为3 红色
+                                              End If
+                                              '如果是高锁
+                                              If (InStr(rivottypename, "B020600")) Then 'c
+                                                  highlitesum = highlitesum + tempcount
+                                                  '统计自动钻铆安装转为仅仅钻孔的高锁
+                                                  If (InStr(rivottypename, "INSTALLED")) Then 'd
+                                                      'instodrill = instodrill + tempcount
+                                                  Else 'd
+                                                      '刚开始就仅仅是自动钻铆钻孔的
+                                                      If (InStr(rivottypename, "DRILL")) Then 'e
+                                                          orgdrill = orgdrill + tempcount
+                                                      End If 'e
+
+
+                                                  End If 'd
+
+                                              Else 'c
+                                                  fiverivet = fiverivet + tempcount
+                                              End If 'c
+
+                                          End If 'b
+                                      End If 'a
+
+
+                                  End If 'aa
+
+
+
+
+
+
+
+
+
+                                  If (InStr(rivottypename, "B020600")) Then 'a
+                                      highliteall = highliteall + tempcount
+
+
+                                      If (InStr(rivottypename, "AFTER AUTOMATED FASTENING")) Then 'b
+                                          highafterall = highafterall + tempcount
+
+                                      Else 'b
+
+                                          If (InStr(rivottypename, "RESYNCING") = 0) Then 'c
+
+
+                                              If (InStr(rivottypename, "FASTENER INSTALLED BY")) Then 'd
+
+                                                  If (InStr(rivottypename, "AG5-")) Then
+                                                      fivehilite = fivehilite + tempcount
+                                                  Else
+                                                      If (InStr(rivottypename, "AG6-")) Then
+                                                          sixhilite = sixhilite + tempcount
+                                                      End If
+                                                  End If
+
+
+                                              Else 'd
+
+                                                  If (InStr(rivottypename, "DRILL ONLY BY")) Then 'e
+
+                                                      If (InStr(rivottypename, "AG5-")) Then
+                                                          fivedrill = fivedrill + tempcount
+                                                      Else
+                                                          If (InStr(rivottypename, "AG6-")) Then
+                                                              sixdrill = sixdrill + tempcount
+                                                          End If
+                                                      End If
+
+
+                                                  End If 'e
+
+
+                                              End If 'd
+
+
+                                          End If 'c
+
+
+                                      End If 'b
+                                  End If 'a
+
+                                  sum = sum + tempcount
+
+                              Next
+
+                              wb.Sheets(1).Cells(processtype.count + 2, fastenerqty.count + 2).Value = sum
+
+
+
+
+                              m = processtype.count + 4
+
+                              wb.Sheets(1).Cells(m, 1).Value = "仅校准(终钉):"
+                              wb.Sheets(1).Cells(m, 2).Value = frconlyfinal
+
+                              m = m + 1
+
+
+                              wb.Sheets(1).Cells(m, 1).Value = "仅校准(临时紧固件):"
+                              wb.Sheets(1).Cells(m, 2).Value = frconlyfastack
+
+
+                              m = m + 1
+
+                              wb.Sheets(1).Cells(m, 1).Value = "仅校准(导孔):"
+                              wb.Sheets(1).Cells(m, 2).Value = FRChole
+
+                              m = m + 1
+
+                              wb.Sheets(1).Cells(m, 1).Value = "校准(任意)插钉:"
+                              wb.Sheets(1).Cells(m, 2).Value = highliterRC
+
+
+
+                              m = m + 1
+
+                              wb.Sheets(1).Cells(m, 1).Value = "校准导孔安装:"
+                              wb.Sheets(1).Cells(m, 2).Value = RChole
+
+                              m = m + 1
+
+                              wb.Sheets(1).Cells(m, 1).Value = "5号铆钉钻铆:"
+                              wb.Sheets(1).Cells(m, 2).Value = fiverivet
+
+                              m = m + 1
+
+                              wb.Sheets(1).Cells(m, 1).Value = "5号高锁钻铆:"
+                              wb.Sheets(1).Cells(m, 2).Value = fivehilite
+
+                              m = m + 1
+
+                              wb.Sheets(1).Cells(m, 1).Value = "6号高锁钻铆:"
+                              wb.Sheets(1).Cells(m, 2).Value = sixhilite
+
+
+
+
+                              m = m + 1
+
+                              wb.Sheets(1).Cells(m, 1).Value = "5号高锁仅钻孔:"
+                              wb.Sheets(1).Cells(m, 2).Value = fivedrill
+
+                              m = m + 1
+
+
+                              wb.Sheets(1).Cells(m, 1).Value = "6号高锁仅钻孔:"
+                              wb.Sheets(1).Cells(m, 2).Value = sixdrill
+
+
+
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "其他点位:"
+                              wb.Sheets(1).Cells(m, 2).Value = afterall
+
+
+
+                              m = m + 2
+                              wb.Sheets(1).Cells(m, 1).Value = "Wrong:"
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "WrongType"
+                              wb.Sheets(1).Cells(m, 2).Value = "FrameName"
+                              wb.Sheets(1).Cells(m, 3).Value = "FastenerName"
+                              wb.Sheets(1).Cells(m, 4).Value = "ProccessType"
+                              wb.Sheets(1).Cells(m, 5).Value = "Qty"
+                              Dim wrongnum As Integer
+
+
+
+                              For wrongnum = 1 To wrongstatistic.count
+                                  m = m + 1
+                                  Dim wrongstr As String
+                                  wrongstr = wrongstatistic.Key(wrongnum)
+
+                                  wb.Sheets(1).Cells(m, 1).Value = Strings.Split(wrongstr, " - ")(0)
+                                  wb.Sheets(1).Cells(m, 2).Value = Strings.Split(wrongstr, " - ")(1)
+                                  wb.Sheets(1).Cells(m, 3).Value = Strings.Split(wrongstr, " - ")(2)
+                                  wb.Sheets(1).Cells(m, 4).Value = Strings.Split(wrongstr, " - ")(3)
+                                  wb.Sheets(1).Cells(m, 5).Value = wrongstatistic.Item2(wrongnum)
+
+                              Next
+
+                              m = m + 2
+                              wb.Sheets(1).Cells(m, 1).Value = "Statistic:"
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 2).Value = "Qty"
+                              wb.Sheets(1).Cells(m, 3).Value = "Percentage"
+
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "SUM"
+                              wb.Sheets(1).Cells(m, 2).Value = sum
+
+                              '输出需要自动钻铆安装总数
+
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "BY MACHINE"
+                              wb.Sheets(1).Cells(m, 2).Value = autosum
+                              wb.Sheets(1).Cells(m, 3).Value = autosum / sum
+                              wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+                              '输出需要手动安装总数
+
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "BY HAND"
+                              wb.Sheets(1).Cells(m, 2).Value = sum - autosum
+                              wb.Sheets(1).Cells(m, 3).Value = (sum - autosum) / sum
+                              wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+
+                              '架下补铆安装总共
+
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "AFTER"
+                              wb.Sheets(1).Cells(m, 2).Value = afterall
+                              wb.Sheets(1).Cells(m, 3).Value = afterall / sum
+                              wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+
+
+                              '需预定位的总数
+
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "RESYNC"
+                              wb.Sheets(1).Cells(m, 2).Value = resynsum
+                              wb.Sheets(1).Cells(m, 3).Value = resynsum / sum
+                              wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+                              m = m + 1
+
+                              '共需高锁数
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "HI-LITE"
+                              wb.Sheets(1).Cells(m, 2).Value = highliteall
+
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "BY MACHINE"
+                              wb.Sheets(1).Cells(m, 2).Value = highlitesum
+                              wb.Sheets(1).Cells(m, 3).Value = highlitesum / highliteall
+                              wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+
+
+                              '手动安装总数
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "BY HAND"
+                              wb.Sheets(1).Cells(m, 2).Value = highliteall - highlitesum
+                              wb.Sheets(1).Cells(m, 3).Value = (highliteall - highlitesum) / highliteall
+                              wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+
+
+                              '架下补铆安装高锁
+
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "AFTER"
+                              wb.Sheets(1).Cells(m, 2).Value = highafterall
+                              wb.Sheets(1).Cells(m, 3).Value = highafterall / highliteall
+                              wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+
+                              '作为校准点的高锁数
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "RESYNC"
+                              wb.Sheets(1).Cells(m, 2).Value = highliteresyn
+                              wb.Sheets(1).Cells(m, 3).Value = highliteresyn / highliteall
+                              wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+
+
+                              '高锁自动钻铆钻孔总数
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "DRILL ONLY"
+                              wb.Sheets(1).Cells(m, 2).Value = orgdrill
+
+                              m = m + 1
+
+                              '共需铆钉数
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "RIVET"
+                              wb.Sheets(1).Cells(m, 2).Value = sum - highliteall
+
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "BY MACHINE"
+                              wb.Sheets(1).Cells(m, 2).Value = autosum - highlitesum
+
+                              wb.Sheets(1).Cells(m, 3).Value = (autosum - highlitesum) / (sum - highliteall)
+                              wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+
+                              '手动安装总数
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "BY HAND"
+                              wb.Sheets(1).Cells(m, 2).Value = (sum - highliteall) - (autosum - highlitesum)
+                              wb.Sheets(1).Cells(m, 3).Value = ((sum - highliteall) - (autosum - highlitesum)) / (sum - highliteall)
+                              wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+
+                              '架下补铆安装铆钉
+
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "AFTER"
+                              wb.Sheets(1).Cells(m, 2).Value = afterall - highafterall
+                              wb.Sheets(1).Cells(m, 3).Value = (afterall - highafterall) / (sum - highliteall)
+                              wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+                              '作为校准点的铆钉数
+                              m = m + 1
+                              wb.Sheets(1).Cells(m, 1).Value = "RESYNC"
+                              wb.Sheets(1).Cells(m, 2).Value = resynsum - highliteresyn
+                              wb.Sheets(1).Cells(m, 3).Value = (resynsum - highliteresyn) / (sum - highliteall)
+                              wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+                              'wb.Sheets(1).Cells.EntireColumn.AutoFit
+
+                              wb.Sheets(1).Columns("A:A").ColumnWidth = 30
+                              wb.Sheets(1).Columns("B:Z").ColumnWidth = 15
+                              wb.Sheets(1).Columns("B:Z").HorizontalAlignment = 3
+                              wb.Sheets(1).Columns("A:Z").wraptext = True
+
+
+
+
+                          End Sub
+
 
         If ifreport Then
-            creatCheckReport()
+            ReportRecursion()
         End If
 
-        If database Then
-            updatedt()
-        End If
-        Return bugcontainer
+                              If database Then
+                                  updatedt()
+                              End If
+                              Return bugcontainer
 
     End Function
 
 
-    Private Sub creatCheckReport(Optional path = "")
+    'Private Sub creatCheckReport(Optional path = "")
 
 
 
-        Dim rivottypecount As Integer
-        Dim resultstrcount As Integer
-        Dim rivottypename As String
-        Dim sum As Integer
-        Dim tempcount As Integer
-        sum = 0
-        Dim autosum As Integer
-        autosum = 0
-        Dim resynsum As Integer
-        resynsum = 0
+    '    Dim rivottypecount As Integer
+    '    Dim resultstrcount As Integer
+    '    Dim rivottypename As String
+    '    Dim sum As Integer
+    '    Dim tempcount As Integer
+    '    sum = 0
+    '    Dim autosum As Integer
+    '    autosum = 0
+    '    Dim resynsum As Integer
+    '    resynsum = 0
 
 
-        Dim frconlyfinal As Integer
-        frconlyfinal = 0
+    '    Dim frconlyfinal As Integer
+    '    frconlyfinal = 0
 
-        Dim frconlyfastack As Integer
-        frconlyfastack = 0
+    '    Dim frconlyfastack As Integer
+    '    frconlyfastack = 0
 
-        Dim highlitesum As Integer
-        highlitesum = 0
-        Dim instodrill As Integer
-        instodrill = 0
-        '原始TVA就是仅仅钻孔的
-        Dim orgdrill As Integer
-        orgdrill = 0
-        '高锁钻孔校准点数
-        Dim highliteresyn As Integer
-        highliteresyn = 0
+    '    Dim highlitesum As Integer
+    '    highlitesum = 0
+    '    Dim instodrill As Integer
+    '    instodrill = 0
+    '    '原始TVA就是仅仅钻孔的
+    '    Dim orgdrill As Integer
+    '    orgdrill = 0
+    '    '高锁钻孔校准点数
+    '    Dim highliteresyn As Integer
+    '    highliteresyn = 0
 
-        '校准插钉
-        Dim highliterRC As Integer
-        highliterRC = 0
+    '    '校准插钉
+    '    Dim highliterRC As Integer
+    '    highliterRC = 0
 
 
-        '仅校准导孔
-        Dim FRChole As Integer
-        FRChole = 0
+    '    '仅校准导孔
+    '    Dim FRChole As Integer
+    '    FRChole = 0
 
-        '校准导孔并安装
-        Dim RChole As Integer
-        RChole = 0
+    '    '校准导孔并安装
+    '    Dim RChole As Integer
+    '    RChole = 0
 
 
-        '手铆和机器一共需用高锁数
-        Dim highliteall As Integer
-        highliteall = 0
-        '手铆和机器下架补铆数
-        Dim afterall As Integer
-        afterall = 0
-        '高锁下架补铆数
-        Dim highafterall As Integer
-        highafterall = 0
+    '    '手铆和机器一共需用高锁数
+    '    Dim highliteall As Integer
+    '    highliteall = 0
+    '    '手铆和机器下架补铆数
+    '    Dim afterall As Integer
+    '    afterall = 0
+    '    '高锁下架补铆数
+    '    Dim highafterall As Integer
+    '    highafterall = 0
 
-        '5号铆钉钻铆
-        Dim fiverivet As Integer
-        fiverivet = 0
+    '    '5号铆钉钻铆
+    '    Dim fiverivet As Integer
+    '    fiverivet = 0
 
 
-        '5号高锁钻铆
-        Dim fivehilite As Integer
-        fivehilite = 0
+    '    '5号高锁钻铆
+    '    Dim fivehilite As Integer
+    '    fivehilite = 0
 
-        '5号高锁钻孔
-        Dim fivedrill As Integer
-        fivedrill = 0
+    '    '5号高锁钻孔
+    '    Dim fivedrill As Integer
+    '    fivedrill = 0
 
-        '6号高锁钻铆
-        Dim sixhilite As Integer
-        sixhilite = 0
+    '    '6号高锁钻铆
+    '    Dim sixhilite As Integer
+    '    sixhilite = 0
 
 
-        '6号高锁钻孔
-        Dim sixdrill As Integer
-        sixdrill = 0
+    '    '6号高锁钻孔
+    '    Dim sixdrill As Integer
+    '    sixdrill = 0
 
 
-        Dim excelobject As Object
-        Dim wb As Object
+    '    Dim excelobject As Object
+    '    Dim wb As Object
 
 
 
 
-        Dim m As Integer
-        Dim n As Integer
-        Dim p As Integer
-        Dim fastextract As String
-        Dim processextract As String
-        Dim fastcount As Integer
-        Dim proccesscount As Integer
+    '    Dim m As Integer
+    '    Dim n As Integer
+    '    Dim p As Integer
+    '    Dim fastextract As String
+    '    Dim processextract As String
+    '    Dim fastcount As Integer
+    '    Dim proccesscount As Integer
 
 
 
 
-        excelobject = CreateObject("excel.application") '启动Excel程序
-        If path = "" Then
+    '    excelobject = CreateObject("excel.application") '启动Excel程序
+    '    If path = "" Then
 
-            excelobject.Visible = True
-        Else
-            excelobject.Visible = False
-        End If
-        wb = excelobject.Workbooks.Add()
-        excelobject.displayalerts = False
-        fastcount = fastenerqty.count
-        proccesscount = processtype.count
+    '        excelobject.Visible = True
+    '    Else
+    '        excelobject.Visible = False
+    '    End If
+    '    wb = excelobject.Workbooks.Add()
+    '    excelobject.displayalerts = False
+    '    fastcount = fastenerqty.count
+    '    proccesscount = processtype.count
 
-        wb.Sheets(1).Cells(1, fastcount + 2).Value = "总计"
+    '    wb.Sheets(1).Cells(1, fastcount + 2).Value = "总计"
 
-        wb.Sheets(1).Cells(proccesscount + 2, 1).Value = "总计"
-        '制作表头，添加统计数据
-        For p = 1 To processtype.count
-            Dim processtypetmp As String
+    '    wb.Sheets(1).Cells(proccesscount + 2, 1).Value = "总计"
+    '    '制作表头，添加统计数据
+    '    For p = 1 To processtype.count
+    '        Dim processtypetmp As String
 
-            processtypetmp = processtype.Key(p)
-            processtypetmp = Strings.Replace(processtypetmp, " AUTOMATED FASTENING", "")
+    '        processtypetmp = processtype.Key(p)
+    '        processtypetmp = Strings.Replace(processtypetmp, " AUTOMATED FASTENING", "")
 
 
-            wb.Sheets(1).Cells(p + 1, 1).Value = processtypetmp
+    '        wb.Sheets(1).Cells(p + 1, 1).Value = processtypetmp
 
-            wb.Sheets(1).Cells(p + 1, fastcount + 2).Value = processtype.Item2(p)
-        Next
+    '        wb.Sheets(1).Cells(p + 1, fastcount + 2).Value = processtype.Item2(p)
+    '    Next
 
-        For n = 1 To fastcount
-            wb.Sheets(1).Cells(1, n + 1).Value = fastenerqty.Key(n)
-            wb.Sheets(1).Cells(proccesscount + 2, n + 1).Value = fastenerqty.Item2(n)
-        Next
+    '    For n = 1 To fastcount
+    '        wb.Sheets(1).Cells(1, n + 1).Value = fastenerqty.Key(n)
+    '        wb.Sheets(1).Cells(proccesscount + 2, n + 1).Value = fastenerqty.Item2(n)
+    '    Next
 
 
-        Dim ff As Integer
-        'For ff = 0 To buglistBox.Items.Count - 1
-        '    If fastenerqty.InTheList(buglistBox.Items.Item(ff)) Then
+    '    Dim ff As Integer
+    '    'For ff = 0 To buglistBox.Items.Count - 1
+    '    '    If fastenerqty.InTheList(buglistBox.Items.Item(ff)) Then
 
-        '        buglistBox.SetSelected(ff, True)
-        '    Else
-        '        buglistBox.SetSelected(ff, True)
-        '    End If
+    '    '        buglistBox.SetSelected(ff, True)
+    '    '    Else
+    '    '        buglistBox.SetSelected(ff, True)
+    '    '    End If
 
-        'Next
+    '    'Next
 
-        wb.Sheets(1).Cells(1, 1).Value = "加工类型/紧固件"
+    '    wb.Sheets(1).Cells(1, 1).Value = "加工类型/紧固件"
 
 
 
-        For m = 1 To checkTVApoint.count
-            rivottypename = checkTVApoint.Key(m)
-            tempcount = checkTVApoint.Item(rivottypename)
-            fastextract = Strings.Trim(Strings.Split(rivottypename, " - ")(0))
-            processextract = Strings.Trim(Strings.Split(rivottypename, " - ")(1))
-            Dim rownum As Integer
-            Dim colnum As Integer
+    '    For m = 1 To checkTVApoint.count
+    '        rivottypename = checkTVApoint.Key(m)
+    '        tempcount = checkTVApoint.Item(rivottypename)
+    '        fastextract = Strings.Trim(Strings.Split(rivottypename, " - ")(0))
+    '        processextract = Strings.Trim(Strings.Split(rivottypename, " - ")(1))
+    '        Dim rownum As Integer
+    '        Dim colnum As Integer
 
-            rownum = processtype.SearchIndex(processextract) + 1
-            colnum = fastenerqty.SearchIndex(fastextract) + 1
-            wb.Sheets(1).Cells(rownum, colnum).Value = tempcount
-            'MsgBox (processextract)
+    '        rownum = processtype.SearchIndex(processextract) + 1
+    '        colnum = fastenerqty.SearchIndex(fastextract) + 1
+    '        wb.Sheets(1).Cells(rownum, colnum).Value = tempcount
+    '        'MsgBox (processextract)
 
-            If (InStr(rivottypename, "AFTER AUTOMATED FASTENING") Or InStr(rivottypename, "BEFORE AUTOMATED FASTENING")) Then
+    '        If (InStr(rivottypename, "AFTER AUTOMATED FASTENING") Or InStr(rivottypename, "BEFORE AUTOMATED FASTENING")) Then
 
-                afterall = afterall + tempcount
-            End If
+    '            afterall = afterall + tempcount
+    '        End If
 
 
 
-            If (InStr(rivottypename, "RESYNCING")) Then 'aa
-                resynsum = resynsum + tempcount
-                '统计高锁校准点数
-                If (InStr(rivottypename, "B020600")) Then 'bb
-                    highliteresyn = highliteresyn + tempcount
-                    If (InStr(rivottypename, "INSTALLED")) Then
-                        highliterRC = highliterRC + tempcount
-                    End If
-                End If 'bb
+    '        If (InStr(rivottypename, "RESYNCING")) Then 'aa
+    '            resynsum = resynsum + tempcount
+    '            '统计高锁校准点数
+    '            If (InStr(rivottypename, "B020600")) Then 'bb
+    '                highliteresyn = highliteresyn + tempcount
+    '                If (InStr(rivottypename, "INSTALLED")) Then
+    '                    highliterRC = highliterRC + tempcount
+    '                End If
+    '            End If 'bb
 
-                If (InStr(rivottypename, "Pilot Holes")) Then 'cc
+    '            If (InStr(rivottypename, "Pilot Holes")) Then 'cc
 
-                    If (InStr(rivottypename, "ONLY")) Then
+    '                If (InStr(rivottypename, "ONLY")) Then
 
-                        FRChole = FRChole + tempcount
+    '                    FRChole = FRChole + tempcount
 
-                    Else
-                        RChole = RChole + tempcount
+    '                Else
+    '                    RChole = RChole + tempcount
 
-                    End If
+    '                End If
 
-                Else 'cc
+    '            Else 'cc
 
-                    If (InStr(rivottypename, "ONLY")) Then
+    '                If (InStr(rivottypename, "ONLY")) Then
 
-                        If (InStr(rivottypename, "Final")) Then
-                            frconlyfinal = frconlyfinal + tempcount
-                        Else
-                            frconlyfastack = frconlyfastack + tempcount
-                        End If
-                    End If
+    '                    If (InStr(rivottypename, "Final")) Then
+    '                        frconlyfinal = frconlyfinal + tempcount
+    '                    Else
+    '                        frconlyfastack = frconlyfastack + tempcount
+    '                    End If
+    '                End If
 
 
-                End If 'cc
+    '            End If 'cc
 
-            Else 'aa
+    '        Else 'aa
 
 
-                If (InStr(rivottypename, "BY AUTOMATED FASTENING")) Then 'a
-                    If (InStr(rivottypename, "INSTALLED") Or InStr(rivottypename, "DRILL")) Then 'b
-                        autosum = autosum + tempcount
+    '            If (InStr(rivottypename, "BY AUTOMATED FASTENING")) Then 'a
+    '                If (InStr(rivottypename, "INSTALLED") Or InStr(rivottypename, "DRILL")) Then 'b
+    '                    autosum = autosum + tempcount
 
-                        If tempcount < 10 Then
-                            wb.Sheets(1).Cells(rownum, colnum).Interior.ColorIndex = 3 ' 背景的颜色为3 红色
-                        End If
-                        '如果是高锁
-                        If (InStr(rivottypename, "B020600")) Then 'c
-                            highlitesum = highlitesum + tempcount
-                            '统计自动钻铆安装转为仅仅钻孔的高锁
-                            If (InStr(rivottypename, "INSTALLED")) Then 'd
-                                'instodrill = instodrill + tempcount
-                            Else 'd
-                                '刚开始就仅仅是自动钻铆钻孔的
-                                If (InStr(rivottypename, "DRILL")) Then 'e
-                                    orgdrill = orgdrill + tempcount
-                                End If 'e
+    '                    If tempcount < 10 Then
+    '                        wb.Sheets(1).Cells(rownum, colnum).Interior.ColorIndex = 3 ' 背景的颜色为3 红色
+    '                    End If
+    '                    '如果是高锁
+    '                    If (InStr(rivottypename, "B020600")) Then 'c
+    '                        highlitesum = highlitesum + tempcount
+    '                        '统计自动钻铆安装转为仅仅钻孔的高锁
+    '                        If (InStr(rivottypename, "INSTALLED")) Then 'd
+    '                            'instodrill = instodrill + tempcount
+    '                        Else 'd
+    '                            '刚开始就仅仅是自动钻铆钻孔的
+    '                            If (InStr(rivottypename, "DRILL")) Then 'e
+    '                                orgdrill = orgdrill + tempcount
+    '                            End If 'e
 
 
-                            End If 'd
+    '                        End If 'd
 
-                        Else 'c
-                            fiverivet = fiverivet + tempcount
-                        End If 'c
+    '                    Else 'c
+    '                        fiverivet = fiverivet + tempcount
+    '                    End If 'c
 
-                    End If 'b
-                End If 'a
+    '                End If 'b
+    '            End If 'a
 
 
-            End If 'aa
+    '        End If 'aa
 
 
 
@@ -1308,603 +2214,603 @@ Public Class TVA_Method
 
 
 
-            If (InStr(rivottypename, "B020600")) Then 'a
-                highliteall = highliteall + tempcount
+    '        If (InStr(rivottypename, "B020600")) Then 'a
+    '            highliteall = highliteall + tempcount
 
 
-                If (InStr(rivottypename, "AFTER AUTOMATED FASTENING")) Then 'b
-                    highafterall = highafterall + tempcount
+    '            If (InStr(rivottypename, "AFTER AUTOMATED FASTENING")) Then 'b
+    '                highafterall = highafterall + tempcount
 
-                Else 'b
+    '            Else 'b
 
-                    If (InStr(rivottypename, "RESYNCING") = 0) Then 'c
+    '                If (InStr(rivottypename, "RESYNCING") = 0) Then 'c
 
 
-                        If (InStr(rivottypename, "FASTENER INSTALLED BY")) Then 'd
+    '                    If (InStr(rivottypename, "FASTENER INSTALLED BY")) Then 'd
 
-                            If (InStr(rivottypename, "AG5-")) Then
-                                fivehilite = fivehilite + tempcount
-                            Else
-                                If (InStr(rivottypename, "AG6-")) Then
-                                    sixhilite = sixhilite + tempcount
-                                End If
-                            End If
+    '                        If (InStr(rivottypename, "AG5-")) Then
+    '                            fivehilite = fivehilite + tempcount
+    '                        Else
+    '                            If (InStr(rivottypename, "AG6-")) Then
+    '                                sixhilite = sixhilite + tempcount
+    '                            End If
+    '                        End If
 
 
-                        Else 'd
+    '                    Else 'd
 
-                            If (InStr(rivottypename, "DRILL ONLY BY")) Then 'e
+    '                        If (InStr(rivottypename, "DRILL ONLY BY")) Then 'e
 
-                                If (InStr(rivottypename, "AG5-")) Then
-                                    fivedrill = fivedrill + tempcount
-                                Else
-                                    If (InStr(rivottypename, "AG6-")) Then
-                                        sixdrill = sixdrill + tempcount
-                                    End If
-                                End If
+    '                            If (InStr(rivottypename, "AG5-")) Then
+    '                                fivedrill = fivedrill + tempcount
+    '                            Else
+    '                                If (InStr(rivottypename, "AG6-")) Then
+    '                                    sixdrill = sixdrill + tempcount
+    '                                End If
+    '                            End If
 
 
-                            End If 'e
+    '                        End If 'e
 
 
-                        End If 'd
+    '                    End If 'd
 
 
-                    End If 'c
+    '                End If 'c
 
 
-                End If 'b
-            End If 'a
+    '            End If 'b
+    '        End If 'a
 
-            sum = sum + tempcount
+    '        sum = sum + tempcount
 
-        Next
+    '    Next
 
-        wb.Sheets(1).Cells(processtype.count + 2, fastenerqty.count + 2).Value = sum
+    '    wb.Sheets(1).Cells(processtype.count + 2, fastenerqty.count + 2).Value = sum
 
 
 
 
-        m = processtype.count + 4
+    '    m = processtype.count + 4
 
-        wb.Sheets(1).Cells(m, 1).Value = "仅校准(终钉):"
-        wb.Sheets(1).Cells(m, 2).Value = frconlyfinal
+    '    wb.Sheets(1).Cells(m, 1).Value = "仅校准(终钉):"
+    '    wb.Sheets(1).Cells(m, 2).Value = frconlyfinal
 
-        m = m + 1
+    '    m = m + 1
 
 
-        wb.Sheets(1).Cells(m, 1).Value = "仅校准(临时紧固件):"
-        wb.Sheets(1).Cells(m, 2).Value = frconlyfastack
+    '    wb.Sheets(1).Cells(m, 1).Value = "仅校准(临时紧固件):"
+    '    wb.Sheets(1).Cells(m, 2).Value = frconlyfastack
 
 
-        m = m + 1
+    '    m = m + 1
 
-        wb.Sheets(1).Cells(m, 1).Value = "仅校准(导孔):"
-        wb.Sheets(1).Cells(m, 2).Value = FRChole
+    '    wb.Sheets(1).Cells(m, 1).Value = "仅校准(导孔):"
+    '    wb.Sheets(1).Cells(m, 2).Value = FRChole
 
-        m = m + 1
+    '    m = m + 1
 
-        wb.Sheets(1).Cells(m, 1).Value = "校准(任意)插钉:"
-        wb.Sheets(1).Cells(m, 2).Value = highliterRC
+    '    wb.Sheets(1).Cells(m, 1).Value = "校准(任意)插钉:"
+    '    wb.Sheets(1).Cells(m, 2).Value = highliterRC
 
 
 
-        m = m + 1
+    '    m = m + 1
 
-        wb.Sheets(1).Cells(m, 1).Value = "校准导孔安装:"
-        wb.Sheets(1).Cells(m, 2).Value = RChole
+    '    wb.Sheets(1).Cells(m, 1).Value = "校准导孔安装:"
+    '    wb.Sheets(1).Cells(m, 2).Value = RChole
 
-        m = m + 1
+    '    m = m + 1
 
-        wb.Sheets(1).Cells(m, 1).Value = "5号铆钉钻铆:"
-        wb.Sheets(1).Cells(m, 2).Value = fiverivet
+    '    wb.Sheets(1).Cells(m, 1).Value = "5号铆钉钻铆:"
+    '    wb.Sheets(1).Cells(m, 2).Value = fiverivet
 
-        m = m + 1
+    '    m = m + 1
 
-        wb.Sheets(1).Cells(m, 1).Value = "5号高锁钻铆:"
-        wb.Sheets(1).Cells(m, 2).Value = fivehilite
+    '    wb.Sheets(1).Cells(m, 1).Value = "5号高锁钻铆:"
+    '    wb.Sheets(1).Cells(m, 2).Value = fivehilite
 
-        m = m + 1
+    '    m = m + 1
 
-        wb.Sheets(1).Cells(m, 1).Value = "6号高锁钻铆:"
-        wb.Sheets(1).Cells(m, 2).Value = sixhilite
+    '    wb.Sheets(1).Cells(m, 1).Value = "6号高锁钻铆:"
+    '    wb.Sheets(1).Cells(m, 2).Value = sixhilite
 
 
 
 
-        m = m + 1
+    '    m = m + 1
 
-        wb.Sheets(1).Cells(m, 1).Value = "5号高锁仅钻孔:"
-        wb.Sheets(1).Cells(m, 2).Value = fivedrill
+    '    wb.Sheets(1).Cells(m, 1).Value = "5号高锁仅钻孔:"
+    '    wb.Sheets(1).Cells(m, 2).Value = fivedrill
 
-        m = m + 1
+    '    m = m + 1
 
 
-        wb.Sheets(1).Cells(m, 1).Value = "6号高锁仅钻孔:"
-        wb.Sheets(1).Cells(m, 2).Value = sixdrill
+    '    wb.Sheets(1).Cells(m, 1).Value = "6号高锁仅钻孔:"
+    '    wb.Sheets(1).Cells(m, 2).Value = sixdrill
 
 
 
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "其他点位:"
-        wb.Sheets(1).Cells(m, 2).Value = afterall
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "其他点位:"
+    '    wb.Sheets(1).Cells(m, 2).Value = afterall
 
 
 
-        m = m + 2
-        wb.Sheets(1).Cells(m, 1).Value = "Wrong:"
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "WrongType"
-        wb.Sheets(1).Cells(m, 2).Value = "FrameName"
-        wb.Sheets(1).Cells(m, 3).Value = "FastenerName"
-        wb.Sheets(1).Cells(m, 4).Value = "ProccessType"
-        wb.Sheets(1).Cells(m, 5).Value = "Qty"
-        Dim wrongnum As Integer
+    '    m = m + 2
+    '    wb.Sheets(1).Cells(m, 1).Value = "Wrong:"
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "WrongType"
+    '    wb.Sheets(1).Cells(m, 2).Value = "FrameName"
+    '    wb.Sheets(1).Cells(m, 3).Value = "FastenerName"
+    '    wb.Sheets(1).Cells(m, 4).Value = "ProccessType"
+    '    wb.Sheets(1).Cells(m, 5).Value = "Qty"
+    '    Dim wrongnum As Integer
 
 
 
-        For wrongnum = 1 To wrongstatistic.count
-            m = m + 1
-            Dim wrongstr As String
-            wrongstr = wrongstatistic.Key(wrongnum)
+    '    For wrongnum = 1 To wrongstatistic.count
+    '        m = m + 1
+    '        Dim wrongstr As String
+    '        wrongstr = wrongstatistic.Key(wrongnum)
 
-            wb.Sheets(1).Cells(m, 1).Value = Strings.Split(wrongstr, " - ")(0)
-            wb.Sheets(1).Cells(m, 2).Value = Strings.Split(wrongstr, " - ")(1)
-            wb.Sheets(1).Cells(m, 3).Value = Strings.Split(wrongstr, " - ")(2)
-            wb.Sheets(1).Cells(m, 4).Value = Strings.Split(wrongstr, " - ")(3)
-            wb.Sheets(1).Cells(m, 5).Value = wrongstatistic.Item2(wrongnum)
+    '        wb.Sheets(1).Cells(m, 1).Value = Strings.Split(wrongstr, " - ")(0)
+    '        wb.Sheets(1).Cells(m, 2).Value = Strings.Split(wrongstr, " - ")(1)
+    '        wb.Sheets(1).Cells(m, 3).Value = Strings.Split(wrongstr, " - ")(2)
+    '        wb.Sheets(1).Cells(m, 4).Value = Strings.Split(wrongstr, " - ")(3)
+    '        wb.Sheets(1).Cells(m, 5).Value = wrongstatistic.Item2(wrongnum)
 
-        Next
+    '    Next
 
-        m = m + 2
-        wb.Sheets(1).Cells(m, 1).Value = "Statistic:"
-        m = m + 1
-        wb.Sheets(1).Cells(m, 2).Value = "Qty"
-        wb.Sheets(1).Cells(m, 3).Value = "Percentage"
+    '    m = m + 2
+    '    wb.Sheets(1).Cells(m, 1).Value = "Statistic:"
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 2).Value = "Qty"
+    '    wb.Sheets(1).Cells(m, 3).Value = "Percentage"
 
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "SUM"
-        wb.Sheets(1).Cells(m, 2).Value = sum
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "SUM"
+    '    wb.Sheets(1).Cells(m, 2).Value = sum
 
-        '输出需要自动钻铆安装总数
-        On Error Resume Next
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "BY MACHINE"
-        wb.Sheets(1).Cells(m, 2).Value = autosum
-        wb.Sheets(1).Cells(m, 3).Value = autosum / sum
-        wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
-        '输出需要手动安装总数
+    '    '输出需要自动钻铆安装总数
+    '    On Error Resume Next
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "BY MACHINE"
+    '    wb.Sheets(1).Cells(m, 2).Value = autosum
+    '    wb.Sheets(1).Cells(m, 3).Value = autosum / sum
+    '    wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+    '    '输出需要手动安装总数
 
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "BY HAND"
-        wb.Sheets(1).Cells(m, 2).Value = sum - autosum
-        wb.Sheets(1).Cells(m, 3).Value = (sum - autosum) / sum
-        wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "BY HAND"
+    '    wb.Sheets(1).Cells(m, 2).Value = sum - autosum
+    '    wb.Sheets(1).Cells(m, 3).Value = (sum - autosum) / sum
+    '    wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
 
-        '架下补铆安装总共
+    '    '架下补铆安装总共
 
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "AFTER"
-        wb.Sheets(1).Cells(m, 2).Value = afterall
-        wb.Sheets(1).Cells(m, 3).Value = afterall / sum
-        wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "AFTER"
+    '    wb.Sheets(1).Cells(m, 2).Value = afterall
+    '    wb.Sheets(1).Cells(m, 3).Value = afterall / sum
+    '    wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
 
 
-        '需预定位的总数
+    '    '需预定位的总数
 
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "RESYNC"
-        wb.Sheets(1).Cells(m, 2).Value = resynsum
-        wb.Sheets(1).Cells(m, 3).Value = resynsum / sum
-        wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
-        m = m + 1
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "RESYNC"
+    '    wb.Sheets(1).Cells(m, 2).Value = resynsum
+    '    wb.Sheets(1).Cells(m, 3).Value = resynsum / sum
+    '    wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+    '    m = m + 1
 
-        '共需高锁数
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "HI-LITE"
-        wb.Sheets(1).Cells(m, 2).Value = highliteall
+    '    '共需高锁数
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "HI-LITE"
+    '    wb.Sheets(1).Cells(m, 2).Value = highliteall
 
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "BY MACHINE"
-        wb.Sheets(1).Cells(m, 2).Value = highlitesum
-        wb.Sheets(1).Cells(m, 3).Value = highlitesum / highliteall
-        wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "BY MACHINE"
+    '    wb.Sheets(1).Cells(m, 2).Value = highlitesum
+    '    wb.Sheets(1).Cells(m, 3).Value = highlitesum / highliteall
+    '    wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
 
 
-        '手动安装总数
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "BY HAND"
-        wb.Sheets(1).Cells(m, 2).Value = highliteall - highlitesum
-        wb.Sheets(1).Cells(m, 3).Value = (highliteall - highlitesum) / highliteall
-        wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+    '    '手动安装总数
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "BY HAND"
+    '    wb.Sheets(1).Cells(m, 2).Value = highliteall - highlitesum
+    '    wb.Sheets(1).Cells(m, 3).Value = (highliteall - highlitesum) / highliteall
+    '    wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
 
 
-        '架下补铆安装高锁
+    '    '架下补铆安装高锁
 
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "AFTER"
-        wb.Sheets(1).Cells(m, 2).Value = highafterall
-        wb.Sheets(1).Cells(m, 3).Value = highafterall / highliteall
-        wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "AFTER"
+    '    wb.Sheets(1).Cells(m, 2).Value = highafterall
+    '    wb.Sheets(1).Cells(m, 3).Value = highafterall / highliteall
+    '    wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
 
-        '作为校准点的高锁数
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "RESYNC"
-        wb.Sheets(1).Cells(m, 2).Value = highliteresyn
-        wb.Sheets(1).Cells(m, 3).Value = highliteresyn / highliteall
-        wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+    '    '作为校准点的高锁数
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "RESYNC"
+    '    wb.Sheets(1).Cells(m, 2).Value = highliteresyn
+    '    wb.Sheets(1).Cells(m, 3).Value = highliteresyn / highliteall
+    '    wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
 
 
-        '高锁自动钻铆钻孔总数
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "DRILL ONLY"
-        wb.Sheets(1).Cells(m, 2).Value = orgdrill
+    '    '高锁自动钻铆钻孔总数
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "DRILL ONLY"
+    '    wb.Sheets(1).Cells(m, 2).Value = orgdrill
 
-        m = m + 1
+    '    m = m + 1
 
-        '共需铆钉数
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "RIVET"
-        wb.Sheets(1).Cells(m, 2).Value = sum - highliteall
+    '    '共需铆钉数
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "RIVET"
+    '    wb.Sheets(1).Cells(m, 2).Value = sum - highliteall
 
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "BY MACHINE"
-        wb.Sheets(1).Cells(m, 2).Value = autosum - highlitesum
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "BY MACHINE"
+    '    wb.Sheets(1).Cells(m, 2).Value = autosum - highlitesum
 
-        wb.Sheets(1).Cells(m, 3).Value = (autosum - highlitesum) / (sum - highliteall)
-        wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+    '    wb.Sheets(1).Cells(m, 3).Value = (autosum - highlitesum) / (sum - highliteall)
+    '    wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
 
-        '手动安装总数
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "BY HAND"
-        wb.Sheets(1).Cells(m, 2).Value = (sum - highliteall) - (autosum - highlitesum)
-        wb.Sheets(1).Cells(m, 3).Value = ((sum - highliteall) - (autosum - highlitesum)) / (sum - highliteall)
-        wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+    '    '手动安装总数
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "BY HAND"
+    '    wb.Sheets(1).Cells(m, 2).Value = (sum - highliteall) - (autosum - highlitesum)
+    '    wb.Sheets(1).Cells(m, 3).Value = ((sum - highliteall) - (autosum - highlitesum)) / (sum - highliteall)
+    '    wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
 
-        '架下补铆安装铆钉
+    '    '架下补铆安装铆钉
 
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "AFTER"
-        wb.Sheets(1).Cells(m, 2).Value = afterall - highafterall
-        wb.Sheets(1).Cells(m, 3).Value = (afterall - highafterall) / (sum - highliteall)
-        wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
-        '作为校准点的铆钉数
-        m = m + 1
-        wb.Sheets(1).Cells(m, 1).Value = "RESYNC"
-        wb.Sheets(1).Cells(m, 2).Value = resynsum - highliteresyn
-        wb.Sheets(1).Cells(m, 3).Value = (resynsum - highliteresyn) / (sum - highliteall)
-        wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
-        'wb.Sheets(1).Cells.EntireColumn.AutoFit
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "AFTER"
+    '    wb.Sheets(1).Cells(m, 2).Value = afterall - highafterall
+    '    wb.Sheets(1).Cells(m, 3).Value = (afterall - highafterall) / (sum - highliteall)
+    '    wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+    '    '作为校准点的铆钉数
+    '    m = m + 1
+    '    wb.Sheets(1).Cells(m, 1).Value = "RESYNC"
+    '    wb.Sheets(1).Cells(m, 2).Value = resynsum - highliteresyn
+    '    wb.Sheets(1).Cells(m, 3).Value = (resynsum - highliteresyn) / (sum - highliteall)
+    '    wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+    '    'wb.Sheets(1).Cells.EntireColumn.AutoFit
 
-        wb.Sheets(1).Columns("A:A").ColumnWidth = 30
-        wb.Sheets(1).Columns("B:Z").ColumnWidth = 15
-        wb.Sheets(1).Columns("B:Z").HorizontalAlignment = 3
-        wb.Sheets(1).Columns("A:Z").wraptext = True
+    '    wb.Sheets(1).Columns("A:A").ColumnWidth = 30
+    '    wb.Sheets(1).Columns("B:Z").ColumnWidth = 15
+    '    wb.Sheets(1).Columns("B:Z").HorizontalAlignment = 3
+    '    wb.Sheets(1).Columns("A:Z").wraptext = True
 
-        If path = "" Then
+    '    If path = "" Then
 
-        Else
-            wb.SaveAs(path)
-            excelobject.Quit()
-        End If
+    '    Else
+    '        wb.SaveAs(path)
+    '        excelobject.Quit()
+    '    End If
 
 
 
 
-    End Sub
-    Public Function CheckTVA(ByRef MyGeoSet As HybridBody, Optional ByVal color As Boolean = True)
-        ' CATIA = MyGeoSet.Application
+    'End Sub
+    'Public Function CheckTVA(ByRef MyGeoSet As HybridBody, Optional ByVal color As Boolean = True)
+    '    ' CATIA = MyGeoSet.Application
 
 
-        '2015.5.12进行重构，与界面元素相分离
-        Dim buglocation As String
+    '    '2015.5.12进行重构，与界面元素相分离
+    '    Dim buglocation As String
 
-        Dim MySourceGeoSet As HybridBody
-        Dim shapecount As Integer
-        Dim tempstring As String
+    '    Dim MySourceGeoSet As HybridBody
+    '    Dim shapecount As Integer
+    '    Dim tempstring As String
 
-        If TVA_Method.ifFastener(MyGeoSet.Name) Then
+    '    If TVA_Method.ifFastener(MyGeoSet.Name) Then
 
-            '紧固件列表
-            fastenerqty.Add(0, MyGeoSet.Name)
+    '        '紧固件列表
+    '        fastenerqty.Add(0, MyGeoSet.Name)
 
 
 
-            Dim i
-            '开始遍历紧固件的下层几何图形集
-            For i = 1 To MyGeoSet.HybridBodies.Count
+    '        Dim i
+    '        '开始遍历紧固件的下层几何图形集
+    '        For i = 1 To MyGeoSet.HybridBodies.Count
 
 
-                Dim MyNewGeoSet As HybridBody
+    '            Dim MyNewGeoSet As HybridBody
 
-                MyNewGeoSet = MyGeoSet.HybridBodies.Item(i)
+    '            MyNewGeoSet = MyGeoSet.HybridBodies.Item(i)
 
-                MySourceGeoSet = MyNewGeoSet
+    '            MySourceGeoSet = MyNewGeoSet
 
-                '计算该几何图形集中点的数量
-                shapecount = Fix(MySourceGeoSet.HybridShapes.Count / 2)
+    '            '计算该几何图形集中点的数量
+    '            shapecount = Fix(MySourceGeoSet.HybridShapes.Count / 2)
 
 
 
-                '判断几何图形集下是否有奇数个shape ,若有，则报错
-                If (MySourceGeoSet.HybridShapes.Count / 2 - shapecount) <> 0 Then
-                    shapecount = shapecount + 1
-                    buglocation = MySourceGeoSet.Parent.Parent.name + " - " + MySourceGeoSet.Name
+    '            '判断几何图形集下是否有奇数个shape ,若有，则报错
+    '            If (MySourceGeoSet.HybridShapes.Count / 2 - shapecount) <> 0 Then
+    '                shapecount = shapecount + 1
+    '                buglocation = MySourceGeoSet.Parent.Parent.name + " - " + MySourceGeoSet.Name
 
-                    wrongstatistic.Add(shapecount, "error in qty of point and line" + " - " + buglocation)
+    '                wrongstatistic.Add(shapecount, "error in qty of point and line" + " - " + buglocation)
 
-                    '以下过程找出孤立的点，并加入到bug列表中
-                    bugcontainer.Add(Checkvector(MySourceGeoSet, buglocation))
-                End If
+    '                '以下过程找出孤立的点，并加入到bug列表中
+    '                bugcontainer.Add(Checkvector(MySourceGeoSet, buglocation))
+    '            End If
 
-                '  Checkdupli MySourceGeoSet
-                If Strings.InStr(MyNewGeoSet.Name, "TEMP") And MyNewGeoSet.HybridShapes.Count <> 0 Then
+    '            '  Checkdupli MySourceGeoSet
+    '            If Strings.InStr(MyNewGeoSet.Name, "TEMP") And MyNewGeoSet.HybridShapes.Count <> 0 Then
 
-                    wrongstatistic.Add(shapecount, "Something in Temp GeoSet" + " - " + MyGeoSet.Parent.name + " - " + MyNewGeoSet.Name)
+    '                wrongstatistic.Add(shapecount, "Something in Temp GeoSet" + " - " + MyGeoSet.Parent.name + " - " + MyNewGeoSet.Name)
 
-                End If
+    '            End If
 
 
 
 
-                If Strings.InStr(MyNewGeoSet.Name, "RESYNCING") Then
+    '            If Strings.InStr(MyNewGeoSet.Name, "RESYNCING") Then
 
-                    If MyNewGeoSet.HybridShapes.Count <> 0 Then
-                        wrongstatistic.Add(shapecount, "Need select Target Type" + " - " + MyGeoSet.Parent.name + " - " + MyNewGeoSet.Name)
+    '                If MyNewGeoSet.HybridShapes.Count <> 0 Then
+    '                    wrongstatistic.Add(shapecount, "Need select Target Type" + " - " + MyGeoSet.Parent.name + " - " + MyNewGeoSet.Name)
 
-                    End If
+    '                End If
 
 
-                    Dim ii
-                    For ii = 0 To 2
+    '                Dim ii
+    '                For ii = 0 To 2
 
 
 
-                        'Set MySourceGeoSet = MyNewGeoSet.HybridBodies.GetItem(UserForm1.ComboBox4.Items.Item(ii))
-                        If (ifGeoExist(MyNewGeoSet, processtree.sectree(ii)) = False) Then
+    '                    'Set MySourceGeoSet = MyNewGeoSet.HybridBodies.GetItem(UserForm1.ComboBox4.Items.Item(ii))
+    '                    If (ifGeoExist(MyNewGeoSet, processtree.sectree(ii)) = False) Then
 
-                            MySourceGeoSet = MyNewGeoSet.HybridBodies.Add()
-                            MySourceGeoSet.Name = processtree.sectree(ii)
-                        Else
-                            MySourceGeoSet = MyNewGeoSet.HybridBodies.GetItem(processtree.sectree(ii))
+    '                        MySourceGeoSet = MyNewGeoSet.HybridBodies.Add()
+    '                        MySourceGeoSet.Name = processtree.sectree(ii)
+    '                    Else
+    '                        MySourceGeoSet = MyNewGeoSet.HybridBodies.GetItem(processtree.sectree(ii))
 
-                        End If
+    '                    End If
 
 
-                        If color Then
+    '                    If color Then
 
-                            Dim selection1 As Object
+    '                        Dim selection1 As Object
 
 
-                            selection1 = CATIA.ActiveDocument.Selection
-                            selection1.Clear()
-                            Dim zz
-                            For zz = 1 To MySourceGeoSet.HybridShapes.Count
-                                selection1.Add(MySourceGeoSet.HybridShapes.Item(zz))
+    '                        selection1 = CATIA.ActiveDocument.Selection
+    '                        selection1.Clear()
+    '                        Dim zz
+    '                        For zz = 1 To MySourceGeoSet.HybridShapes.Count
+    '                            selection1.Add(MySourceGeoSet.HybridShapes.Item(zz))
 
-                            Next
+    '                        Next
 
 
-                            If Strings.InStr(MyNewGeoSet.Name, "RESYNCING ONLY") Then
+    '                        If Strings.InStr(MyNewGeoSet.Name, "RESYNCING ONLY") Then
 
-                                '红色
-                                selection1.VisProperties.SetRealColor(255, 0, 0, 1)
-                            Else
-                                '绿色
-                                selection1.VisProperties.SetRealColor(0, 128, 64, 1)
+    '                            '红色
+    '                            selection1.VisProperties.SetRealColor(255, 0, 0, 1)
+    '                        Else
+    '                            '绿色
+    '                            selection1.VisProperties.SetRealColor(0, 128, 64, 1)
 
-                            End If
+    '                        End If
 
 
-                            If Strings.InStr(MySourceGeoSet.Name, "Final") Then
+    '                        If Strings.InStr(MySourceGeoSet.Name, "Final") Then
 
 
 
-                                '  selection1.VisProperties.SetSymbolType(6)
-                                If Strings.InStr(MyGeoSet.Name, "B020600") Then
-                                    '设为大圆
-                                    selection1.VisProperties.SetSymbolType(3)
-                                Else
+    '                            '  selection1.VisProperties.SetSymbolType(6)
+    '                            If Strings.InStr(MyGeoSet.Name, "B020600") Then
+    '                                '设为大圆
+    '                                selection1.VisProperties.SetSymbolType(3)
+    '                            Else
 
-                                    '设为十字
-                                    selection1.VisProperties.SetSymbolType(2)
-                                End If
-                            Else
-                                If Strings.InStr(MySourceGeoSet.Name, "Fast Tack") Then
-                                    '星号
-                                    selection1.VisProperties.SetSymbolType(7)
+    '                                '设为十字
+    '                                selection1.VisProperties.SetSymbolType(2)
+    '                            End If
+    '                        Else
+    '                            If Strings.InStr(MySourceGeoSet.Name, "Fast Tack") Then
+    '                                '星号
+    '                                selection1.VisProperties.SetSymbolType(7)
 
-                                Else
-                                    '同心圆
+    '                            Else
+    '                                '同心圆
 
-                                    If Strings.InStr(MyNewGeoSet.Name, "DRILL") Then
+    '                                If Strings.InStr(MyNewGeoSet.Name, "DRILL") Then
 
-                                        selection1.VisProperties.SetSymbolType(5)
-                                    Else
+    '                                    selection1.VisProperties.SetSymbolType(5)
+    '                                Else
 
-                                        selection1.VisProperties.SetSymbolType(4)
+    '                                    selection1.VisProperties.SetSymbolType(4)
 
-                                    End If
+    '                                End If
 
 
-                                End If
+    '                            End If
 
-                            End If
+    '                        End If
 
-                        End If
+    '                    End If
 
 
-                        '检查校准的几何图形集
+    '                    '检查校准的几何图形集
 
 
 
-                        'If database Then
+    '                    'If database Then
 
 
-                        '    ' buglocation = MyGeoSet.Parent.name + " - " + MyNewGeoSet.Name + " - " + MySourceGeoSet.Name
-                        '    updatedatabase(MySourceGeoSet, MyGeoSet.Parent.name, MyGeoSet.Name, Strings.Split(MyNewGeoSet.Name, " - ")(1) + " - " + MySourceGeoSet.Name)
-                        'End If
+    '                    '    ' buglocation = MyGeoSet.Parent.name + " - " + MyNewGeoSet.Name + " - " + MySourceGeoSet.Name
+    '                    '    updatedatabase(MySourceGeoSet, MyGeoSet.Parent.name, MyGeoSet.Name, Strings.Split(MyNewGeoSet.Name, " - ")(1) + " - " + MySourceGeoSet.Name)
+    '                    'End If
 
 
 
-                        shapecount = Fix(MySourceGeoSet.HybridShapes.Count / 2)
-                        'MsgBox MySourceGeoSet.name
+    '                    shapecount = Fix(MySourceGeoSet.HybridShapes.Count / 2)
+    '                    'MsgBox MySourceGeoSet.name
 
 
 
-                        If (MySourceGeoSet.HybridShapes.Count / 2 - shapecount) <> 0 Then
-                            shapecount = shapecount + 1
-                            buglocation = MyGeoSet.Parent.name + " - " + MyNewGeoSet.Name + " - " + MySourceGeoSet.Name
+    '                    If (MySourceGeoSet.HybridShapes.Count / 2 - shapecount) <> 0 Then
+    '                        shapecount = shapecount + 1
+    '                        buglocation = MyGeoSet.Parent.name + " - " + MyNewGeoSet.Name + " - " + MySourceGeoSet.Name
 
 
-                            wrongstatistic.Add(shapecount, "error in qty of point and line" + " - " + buglocation)
+    '                        wrongstatistic.Add(shapecount, "error in qty of point and line" + " - " + buglocation)
 
 
-                            bugcontainer.Add(Checkvector(MySourceGeoSet, buglocation))
+    '                        bugcontainer.Add(Checkvector(MySourceGeoSet, buglocation))
 
-                        End If
+    '                    End If
 
-                        tempstring = Strings.Trim(Strings.Split(MyNewGeoSet.Name, " - ")(1)) + "-" + Strings.Trim(Strings.Split(MySourceGeoSet.Name, " - ")(1))
+    '                    tempstring = Strings.Trim(Strings.Split(MyNewGeoSet.Name, " - ")(1)) + "-" + Strings.Trim(Strings.Split(MySourceGeoSet.Name, " - ")(1))
 
-                        checkTVApoint.Add(shapecount, MyNewGeoSet.Name + "-" + Strings.Trim(Strings.Split(MySourceGeoSet.Name, " - ")(1)))
+    '                    checkTVApoint.Add(shapecount, MyNewGeoSet.Name + "-" + Strings.Trim(Strings.Split(MySourceGeoSet.Name, " - ")(1)))
 
-                        '统计各个紧固件数量Fastener_Qty
-                        fastenerqty.Add(shapecount, MyGeoSet.Name)
-                        processtype.Add(shapecount, tempstring)
+    '                    '统计各个紧固件数量Fastener_Qty
+    '                    fastenerqty.Add(shapecount, MyGeoSet.Name)
+    '                    processtype.Add(shapecount, tempstring)
 
-                    Next
+    '                Next
 
-                Else
+    '            Else
 
-                    '不为resync
-                    '检查非校准的几何图形集
-                    If (MyNewGeoSet.Name.Contains("AUTOMATED FASTENING") Or MyNewGeoSet.Name.Contains("TEMP")) Then
+    '                '不为resync
+    '                '检查非校准的几何图形集
+    '                If (MyNewGeoSet.Name.Contains("AUTOMATED FASTENING") Or MyNewGeoSet.Name.Contains("TEMP")) Then
 
 
 
-                        'If database Then
+    '                    'If database Then
 
-                        '    updatedatabase(MyNewGeoSet, MyGeoSet.Parent.name, MyGeoSet.Name, Strings.Split(MyNewGeoSet.Name, " - ")(1))
-                        'End If
+    '                    '    updatedatabase(MyNewGeoSet, MyGeoSet.Parent.name, MyGeoSet.Name, Strings.Split(MyNewGeoSet.Name, " - ")(1))
+    '                    'End If
 
-                        If color Then
+    '                    If color Then
 
-                            Dim selection1 As Object
+    '                        Dim selection1 As Object
 
-                            selection1 = CATIA.ActiveDocument.Selection
-                            selection1.Clear()
-                            Dim zzz
-                            For zzz = 1 To MyNewGeoSet.HybridShapes.Count
-                                selection1.Add(MyNewGeoSet.HybridShapes.Item(zzz))
+    '                        selection1 = CATIA.ActiveDocument.Selection
+    '                        selection1.Clear()
+    '                        Dim zzz
+    '                        For zzz = 1 To MyNewGeoSet.HybridShapes.Count
+    '                            selection1.Add(MyNewGeoSet.HybridShapes.Item(zzz))
 
-                            Next
+    '                        Next
 
 
 
-                            If Strings.InStr(MyNewGeoSet.Name, "BY") Then
+    '                        If Strings.InStr(MyNewGeoSet.Name, "BY") Then
 
 
-                                If Strings.InStr(MyGeoSet.Name, "5-") Then
+    '                            If Strings.InStr(MyGeoSet.Name, "5-") Then
 
-                                    If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
-                                        '蓝色
-                                        selection1.VisProperties.SetRealColor(0, 0, 255, 1)
-                                    Else
-                                        selection1.VisProperties.SetRealColor(0, 255, 255, 1)
-                                    End If
+    '                                If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
+    '                                    '蓝色
+    '                                    selection1.VisProperties.SetRealColor(0, 0, 255, 1)
+    '                                Else
+    '                                    selection1.VisProperties.SetRealColor(0, 255, 255, 1)
+    '                                End If
 
-                                Else
-                                    '棕色
+    '                            Else
+    '                                '棕色
 
-                                    If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
+    '                                If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
 
-                                        selection1.VisProperties.SetRealColor(128, 64, 64, 1)
-                                    Else
-                                        selection1.VisProperties.SetRealColor(255, 128, 0, 1)
-                                    End If
-                                End If
+    '                                    selection1.VisProperties.SetRealColor(128, 64, 64, 1)
+    '                                Else
+    '                                    selection1.VisProperties.SetRealColor(255, 128, 0, 1)
+    '                                End If
+    '                            End If
 
 
 
-                                If Strings.InStr(MyNewGeoSet.Name, "INSTALL") Then
-                                    If Strings.InStr(MyGeoSet.Name, "B020600") Then
-                                        '设为大圆
-                                        selection1.VisProperties.SetSymbolType(3)
-                                    Else
+    '                            If Strings.InStr(MyNewGeoSet.Name, "INSTALL") Then
+    '                                If Strings.InStr(MyGeoSet.Name, "B020600") Then
+    '                                    '设为大圆
+    '                                    selection1.VisProperties.SetSymbolType(3)
+    '                                Else
 
-                                        '设为十字
-                                        selection1.VisProperties.SetSymbolType(2)
-                                    End If
+    '                                    '设为十字
+    '                                    selection1.VisProperties.SetSymbolType(2)
+    '                                End If
 
 
-                                    'selection1 = Nothing
-                                Else
+    '                                'selection1 = Nothing
+    '                            Else
 
-                                    If Strings.InStr(MyNewGeoSet.Name, "DRILL") Then
+    '                                If Strings.InStr(MyNewGeoSet.Name, "DRILL") Then
 
-                                        '设为实心圆
-                                        selection1.VisProperties.SetSymbolType(5)
+    '                                    '设为实心圆
+    '                                    selection1.VisProperties.SetSymbolType(5)
 
-                                    End If
+    '                                End If
 
-                                End If
-                            Else
+    '                            End If
+    '                        Else
 
 
-                                If Strings.InStr(MyNewGeoSet.Name, "AFTER") Then
-                                    '符号为X
-                                    'after 点为黑色
-                                    selection1.VisProperties.SetRealColor(0, 0, 0, 1)
-                                    selection1.VisProperties.SetSymbolType(1)
-                                Else
+    '                            If Strings.InStr(MyNewGeoSet.Name, "AFTER") Then
+    '                                '符号为X
+    '                                'after 点为黑色
+    '                                selection1.VisProperties.SetRealColor(0, 0, 0, 1)
+    '                                selection1.VisProperties.SetSymbolType(1)
+    '                            Else
 
-                                    If Strings.InStr(MyGeoSet.Name, "5-") Then
-                                        '都改为深色
+    '                                If Strings.InStr(MyGeoSet.Name, "5-") Then
+    '                                    '都改为深色
 
-                                        If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
-                                            '紫色
-                                            selection1.VisProperties.SetRealColor(255, 0, 255, 1)
-                                        Else
-                                            '深色
-                                            selection1.VisProperties.SetRealColor(255, 165, 0, 1)
-                                        End If
+    '                                    If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
+    '                                        '紫色
+    '                                        selection1.VisProperties.SetRealColor(255, 0, 255, 1)
+    '                                    Else
+    '                                        '深色
+    '                                        selection1.VisProperties.SetRealColor(255, 165, 0, 1)
+    '                                    End If
 
-                                    Else
-                                        '棕色
+    '                                Else
+    '                                    '棕色
 
-                                        If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
+    '                                    If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
 
-                                            selection1.VisProperties.SetRealColor(64, 32, 32, 1)
-                                        Else
-                                            'Make protruding head 6# darker
-                                            selection1.VisProperties.SetRealColor(64, 32, 0, 1)
-                                        End If
-                                    End If
+    '                                        selection1.VisProperties.SetRealColor(64, 32, 32, 1)
+    '                                    Else
+    '                                        'Make protruding head 6# darker
+    '                                        selection1.VisProperties.SetRealColor(64, 32, 0, 1)
+    '                                    End If
+    '                                End If
 
-                                    If Strings.InStr(MyNewGeoSet.Name, "DRILL") Then
-                                        selection1.VisProperties.SetSymbolType(4)
-                                    Else
+    '                                If Strings.InStr(MyNewGeoSet.Name, "DRILL") Then
+    '                                    selection1.VisProperties.SetSymbolType(4)
+    '                                Else
 
-                                        If Strings.InStr(MyGeoSet.Name, "B020600") Then
-                                            '设为大圆
-                                            selection1.VisProperties.SetSymbolType(3)
-                                        Else
+    '                                    If Strings.InStr(MyGeoSet.Name, "B020600") Then
+    '                                        '设为大圆
+    '                                        selection1.VisProperties.SetSymbolType(3)
+    '                                    Else
 
-                                            '设为十字
-                                            selection1.VisProperties.SetSymbolType(2)
-                                        End If
+    '                                        '设为十字
+    '                                        selection1.VisProperties.SetSymbolType(2)
+    '                                    End If
 
-                                    End If
+    '                                End If
 
-                                End If
+    '                            End If
 
 
 
 
-                            End If
+    '                        End If
 
 
-                        End If
+    '                    End If
 
 
 
@@ -1914,42 +2820,42 @@ Public Class TVA_Method
 
 
 
-                        If Strings.InStr(MyNewGeoSet.Name, " - ") Then
+    '                    If Strings.InStr(MyNewGeoSet.Name, " - ") Then
 
-                            tempstring = Strings.Trim(Strings.Split(MySourceGeoSet.Name, " - ")(1))
-                            checkTVApoint.Add(shapecount, MySourceGeoSet.Name)
+    '                        tempstring = Strings.Trim(Strings.Split(MySourceGeoSet.Name, " - ")(1))
+    '                        checkTVApoint.Add(shapecount, MySourceGeoSet.Name)
 
-                            fastenerqty.Add(shapecount, MyGeoSet.Name)
-                            processtype.Add(shapecount, tempstring)
-                        End If
-                    Else
-                        wrongstatistic.Add(shapecount, "error geoset" + " - " + MyNewGeoSet.Name + " - ")
+    '                        fastenerqty.Add(shapecount, MyGeoSet.Name)
+    '                        processtype.Add(shapecount, tempstring)
+    '                    End If
+    '                Else
+    '                    wrongstatistic.Add(shapecount, "error geoset" + " - " + MyNewGeoSet.Name + " - ")
 
-                    End If
-                End If
+    '                End If
+    '            End If
 
 
-            Next
+    '        Next
 
-        Else
-            If MyGeoSet.HybridShapes.Count <> 0 Then
-                wrongstatistic.Add(shapecount, "keng brother bug" + " - " + MyGeoSet.Parent.name + " - " + MyGeoSet.Name)
-            End If
+    '    Else
+    '        If MyGeoSet.HybridShapes.Count <> 0 Then
+    '            wrongstatistic.Add(shapecount, "keng brother bug" + " - " + MyGeoSet.Parent.name + " - " + MyGeoSet.Name)
+    '        End If
 
-            Dim k As Integer
+    '        Dim k As Integer
 
-            For k = 1 To MyGeoSet.HybridBodies.Count
-                '开始递归
-                CheckTVA(MyGeoSet.HybridBodies.Item(k))
-            Next
-        End If
+    '        For k = 1 To MyGeoSet.HybridBodies.Count
+    '            '开始递归
+    '            CheckTVA(MyGeoSet.HybridBodies.Item(k))
+    '        Next
+    '    End If
 
 
 
 
 
 
-        '生产表格
+    '    '生产表格
 
 
 
@@ -1963,10 +2869,10 @@ Public Class TVA_Method
 
 
 
-        Return Nothing
+    '    Return Nothing
 
 
-    End Function
+    'End Function
 
 
 #End Region
@@ -2328,9 +3234,15 @@ Error_Handler:
                 Measurement = SPAWorkb.GetMeasurable(MyGeoSet.HybridShapes.Item(m))
 
                 'Get the coordinates (Part based) from this point
-                Call Measurement.GetPoint(Coords)
+                'Try
 
-                Dim myVect As Object
+                Call Measurement.GetPoint(Coords)
+                    'Catch ex As Exception
+                    '    Console.Write(MyGeoSet.HybridShapes.Item(m).Name)
+                    'End Try
+
+
+                    Dim myVect As Object
                 Dim s
                 Dim foundvect
                 foundvect = False
@@ -2535,13 +3447,27 @@ Error_Handler:
     End Sub
 
 
-    Public Shared Function CheckHybridShapeItem(oItem As Object) As Boolean
+    Public Shared Function CheckHybridShapeItem(oItem As Object) As Boolean?
 
-        CheckHybridShapeItem = False
+
         Dim aa = TypeName(oItem)
         If aa.Contains("HybridShapePoint") Or (aa = "HybridShapeProject") Or (aa = "HybridShapeIntersection") Then
-            CheckHybridShapeItem = True
+            Return True
+        Else
+            If aa.Contains("HybridShapeLine") Then
+                Return False
+
+            Else
+                ' If the shape is neither point or line,return null
+                Return Nothing
+            End If
+
+
+
+
         End If
+
+
 
     End Function
 

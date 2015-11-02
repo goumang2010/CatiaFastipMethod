@@ -696,20 +696,25 @@ Public Class processTree : Inherits processTreeBase
             'Activate the name of the correct window
             partDocument1.Activate()
 
+            Try
 
 
+                'Cut and paste into the geoset
+                selection1 = CATIA.ActiveDocument.Selection
+                selection2 = CATIA.ActiveDocument.Selection
+                selection2.Clear()
 
-            'Cut and paste into the geoset
-            selection1 = CATIA.ActiveDocument.Selection
-            selection2 = CATIA.ActiveDocument.Selection
-            selection2.Clear()
+                selection1.Clear()
+                selection1.Add(strParam1)
+                selection1.Cut()
+                '  selection1.Copy()
+                selection2.Add(framenamegeo)
 
-            selection1.Clear()
-            selection1.Add(strParam1)
-            selection1.Cut()
-            '  selection1.Copy()
-            selection2.Add(framenamegeo)
-            selection2.Paste()
+                selection2.Paste()
+            Catch ex As Exception
+                MsgBox("FAIL TO APPLY ATTRIBUTE TO" + ii)
+            End Try
+
 
             part1.Update()
             part1.UpdateObject(framenamegeo)

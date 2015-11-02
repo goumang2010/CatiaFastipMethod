@@ -423,6 +423,8 @@ Public Class Process_Method
         'go through each robot task
         For index2 = 0 To UBound(RobotTasks)
             Dim task = RobotTasks(index2)
+
+
             list.Add(task.name)
             If RobotTasks(index2 + 1) Is Nothing Then
 

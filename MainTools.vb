@@ -17,11 +17,11 @@ Public Class MainTools
 
     Dim CATIA As Application
     Dim TVAfather As Product = Nothing
-    Dim OuterSurface As HybridShapeExtract
+    Dim OuterSurface As AnyObject
     Dim sourcetvainner As Part
     Dim targetTVA As Part
     Dim SPProducts As New Dictionary(Of String, Product)
-    Dim searchDic As Dictionary(Of String, HybridShape)
+    Dim searchDic As New Dictionary(Of String, HybridShape)
     Dim defTVAModel As TVA_Method
     Dim opGeo As HybridBody = Nothing
     Dim CATIA_task As Threading.Thread
@@ -442,8 +442,10 @@ Public Class MainTools
         Dim selection1 As Object
         selection1 = CATIA.ActiveDocument.Selection
 
-        Dim FilterData(0)
+        Dim FilterData(1)
         FilterData(0) = "HybridShapeExtract"
+        FilterData(1) = "HybridShapeAssemble"
+
 
         If (selection1.SelectElement2(FilterData, "Choose Outer surface extract", False) <> "Normal") Then
             MsgBox("Issue with part selected, please select again")
@@ -478,15 +480,16 @@ Public Class MainTools
 
     Private Sub opreateTVA(Optional ifrpt As Boolean = True)
 
-        Dim aa = defTVAModel
+        Dim aa = New TVA_Method(sourceTVA)
+
         aa.PilotHoles = opGeo
         aa.pointGeo = rootGeoSet.Text
         aa.FstList = FastNames_
-
+        Button13.Enabled = True
 
         If iffix.Checked Then
 
-            Dim cc = aa.fix_all()
+            Dim cc = aa.fix_all(False)
             If ifrpt Then
                 cc.report()
             End If
@@ -524,7 +527,7 @@ Public Class MainTools
         End If
 
 
-
+        Button13.Enabled = False
         'If ifdt.Checked Then
 
         '    aa.updatedt()
@@ -533,9 +536,11 @@ Public Class MainTools
     End Sub
 
     Private Sub Button4_Click(sender As Object, e As EventArgs) Handles Button4.Click
-        CATIA_task = New Thread(New ThreadStart(Sub() opreateTVA()))
-        opreateTVA()
+        showPoints = New Dictionary(Of String, HybridShape)
 
+        CATIA_task = New Thread(New ThreadStart(Sub() opreateTVA()))
+        ' opreateTVA()
+        CATIA_task.Start()
 
     End Sub
 
@@ -1012,5 +1017,50 @@ Public Class MainTools
 
         DataGridView1.DataSource = dd.output_dt()
 
+    End Sub
+
+    Private Sub Button12_Click_1(sender As Object, e As EventArgs) Handles Button12.Click
+
+        If surfaceText.Text = "" Or lookuptable_path.Text = "" Or SPProducts.Count = 0 Then
+            MsgBox("Make sure you have a Extract surface, SP01 Product Selected")
+        Else
+            Dim prodDoc = CATIA.ActiveDocument
+
+            'MsgLabel.Text = "Getting pointsFatherProduct"
+            'Dim TVAfather As Product = Nothing
+            'TVA_Method.GetFatherProduct(CATIA.ActiveDocument.Product, sourceTVA.Parent, TVAfather)
+
+            'Dim sorpart = New TVA_Method(sourceTVA, TVAfather)
+            'sorpart.FstList = FastNames_
+            'MsgLabel.Text = "Getting TVA points"
+
+
+            'Dim sourcepplist As CENPoints
+            'sourcepplist = sorpart.TVAPoints
+
+
+            MsgLabel.Text = "Extracting the SP models"
+            Dim SP01s_ = New CENSP01s(SPProducts.Values.AsEnumerable())
+
+
+
+            Dim targetPart = New TVA_Method(targetTVA)
+
+            Dim SPTree = SP01s_.to_points.createPointsToProcessTree(targetTVA, OuterSurface)
+
+            MsgLabel.Text = "Outputing fasterners"
+
+
+
+            SPTree.output_topart(TargetTVABox.Text, TargetTVABox.Text, targetPart.pilot_geoset)
+
+
+        End If
+        MsgLabel.Text = "Done"
+    End Sub
+
+    Private Sub Button13_Click(sender As Object, e As EventArgs) Handles Button13.Click
+        CATIA_task.Abort()
+        Button13.Enabled = False
     End Sub
 End Class

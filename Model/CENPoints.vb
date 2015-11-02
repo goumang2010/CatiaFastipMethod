@@ -11,6 +11,8 @@ Public Class CENPoints
     Public hb As HybridBody
     Public Points_ As New Dictionary(Of String, CENPoint)
     Public dupli As New List(Of CENPoint)
+    Public singleline As New List(Of HybridShape)
+    Public wrongpoints As New List(Of HybridShape)
     Dim wrongstatistic As New processStatic()
     Public CATIA
     'comment
@@ -51,28 +53,30 @@ Public Class CENPoints
         Dim tmplines = New List(Of HybridShape)()
         For Each hs As HybridShape In hbb.HybridShapes
             '判断点
-            If TVA_Method.CheckHybridShapeItem(hs) Then
-
-                tmppoints.Add(hs)
+            Dim shapesort = TVA_Method.CheckHybridShapeItem(hs)
+            If shapesort Is Nothing Then
+                'Just delete it  in fix process
+                wrongpoints.Add(hs)
             Else
+                If shapesort Then
+                    tmppoints.Add(hs)
+                Else
+                    tmplines.Add(hs)
+                End If
 
-                tmplines.Add(hs)
+
             End If
+
+
+
 
         Next
 
         For Each pp As HybridShape In tmppoints
             'Get the SPAWorkbench from the measurement
-
             Dim Coords(2) As Object
-
-
-
-
-
             'Get the measurement for the point
             Measurement = SPAWorkb.GetMeasurable(pp)
-
             'Get the coordinates (Part based) from this point
             Call Measurement.GetPoint(Coords)
 
@@ -99,6 +103,8 @@ Public Class CENPoints
 
         Next
 
+        singleline.AddRange(tmplines)
+
         For Each bb In hbb.HybridBodies
             walk(bb)
 
@@ -111,134 +117,8 @@ Public Class CENPoints
 
 
 
-    Public Function fix_outlines(partfilename As String, surface As HybridShapeExtract) As processStatic
 
-        '考虑只有一个面的情况
-
-
-        Dim ppstatic As New processStatic
-        Dim documents1 As Documents
-
-        Dim partDocument1 As PartDocument
-        documents1 = CATIA.Documents
-        partDocument1 = documents1.Item(partfilename)
-        Dim part1 As Part
-        part1 = partDocument1.Part
-        partDocument1.Activate()
-        Dim SPAWorkb As INFITF.Workbench
-        Dim Measurement
-        Dim Coords(2) As Object
-        Dim source, destination, sourceinter
-        source = CATIA.ActiveDocument.Selection
-        sourceinter = CATIA.ActiveDocument.Selection
-        destination = CATIA.ActiveDocument.Selection
-
-
-
-
-
-
-        Dim reference2 As Reference
-        SPAWorkb = CATIA.ActiveDocument.GetWorkbench("SPAWorkbench")
-        ' Dim tempgeo = hb.HybridBodies.Add()
-
-        part1.InWorkObject = hb
-        For Each pp As CENPoint In Points_.Values
-
-
-            'Get the measurement for the point
-            Measurement = SPAWorkb.GetMeasurable(pp.MyPoint)
-
-            'Get the coordinates (Part based) from this point
-            Call Measurement.GetPoint(Coords)
-            ' reference1 = part1.CreateReferenceFromObject(pp.MyPoint)
-            '量取线到法向的距离
-            reference2 = part1.CreateReferenceFromObject(pp.MyVector)
-
-            Dim MinimumDistance As Double
-            MinimumDistance = Measurement.GetMinimumDistance(reference2)
-
-
-
-
-            Dim reference1 As Reference
-            reference1 = part1.CreateReferenceFromObject(surface)
-
-            '点到面上的距离
-            Dim MinimumDistance2 As Double
-            MinimumDistance2 = Measurement.GetMinimumDistance(reference1)
-
-            '线到面的距离 
-            Dim TheMeasurable As SPATypeLib.Measurable
-            TheMeasurable = SPAWorkb.GetMeasurable(reference2)
-            Dim MinimumDistance3 As Double
-            MinimumDistance3 = TheMeasurable.GetMinimumDistance(reference1)
-
-            Dim noerr As Boolean = False
-
-            If MinimumDistance3 > 0 Then
-
-            Else
-
-                noerr = True
-            End If
-
-
-
-
-
-
-
-            If noerr And (MinimumDistance > 0 Or MinimumDistance2 > 0) Then
-                '检测到点不在法向上
-                ppstatic.Add(1, pp.Frame + " - " + pp.Diam)
-                Dim hybridShapeIntersection1 As HybridShapeIntersection
-                hybridShapeIntersection1 = part1.HybridShapeFactory.AddNewIntersection(reference2, reference1)
-                hybridShapeIntersection1.PointType = 0
-                ' hybridShapeIntersection1.ExtendMode = 3
-                hb.AppendHybridShape(hybridShapeIntersection1)
-                part1.Update()
-                ' hb.AppendHybridShape(hybridShapeIntersection1)
-                sourceinter.Clear()
-                sourceinter.Add(hybridShapeIntersection1)
-                sourceinter.Copy()
-                destination.Clear()
-                destination.Add(hb)
-                destination.PasteSpecial("CATPrtResultWithOutLink")
-
-                sourceinter.Clear()
-                sourceinter.Add(hybridShapeIntersection1)
-                sourceinter.Delete()
-
-
-
-                source.Clear()
-
-                source.Add(pp.MyPoint)
-
-                source.Delete()
-
-
-                part1.Update()
-
-                '重新绑定point
-                '不做其他操作了，则无必要
-                'pp.MyPoint = hb.HybridShapes.Item(hb.HybridShapes.Count)
-
-            End If
-
-
-        Next
-        '整体删除临时几何图形集
-        'sourceinter.Clear()
-        'sourceinter.Add(hybridShapeIntersection1)
-        'sourceinter.Delete()
-
-
-        Return ppstatic
-
-    End Function
-    Public Function fix_outlines(partfilename As String, surflist As List(Of HybridShapeExtract)) As processStatic
+    Public Function fix_outlines(partfilename As String, surflist As List(Of HybridShape)) As processStatic
 
         '2015.7.25同时修复点不在面上及点不在线上的问题
 
@@ -261,119 +141,146 @@ Public Class CENPoints
         destination = CATIA.ActiveDocument.Selection
 
         Dim surfcount = surflist.Count()
-   
-
-
-
+        Dim surface As HybridShapeExtract
+        surface = surflist(0)
+        Dim reference1 As Reference
+        reference1 = part1.CreateReferenceFromObject(surface)
         Dim reference2 As Reference
         SPAWorkb = CATIA.ActiveDocument.GetWorkbench("SPAWorkbench")
-        ' Dim tempgeo = hb.HybridBodies.Add()
-
         part1.InWorkObject = hb
+        Dim lineToSurf As Func(Of HybridShape, Reference)
+        lineToSurf = Function(vct As HybridShape)
+
+                         Dim lineref = part1.CreateReferenceFromObject(vct)
+                         Dim surfref = part1.CreateReferenceFromObject(surflist(0))
+                         Dim TheMeasurable As SPATypeLib.Measurable
+                         TheMeasurable = SPAWorkb.GetMeasurable(lineref)
+                         Dim MinimumDistance3 As Double
+                         MinimumDistance3 = TheMeasurable.GetMinimumDistance(surfref)
+
+                         Dim noerr As Boolean = True
+
+                         If MinimumDistance3 > 0 Then
+                             noerr = False
+
+                             If surfcount > 1 Then
+
+
+                                 For si As Integer = 1 To surfcount - 1
+
+                                     surfref = part1.CreateReferenceFromObject(surflist(si))
+                                     MinimumDistance3 = TheMeasurable.GetMinimumDistance(surfref)
+                                     If MinimumDistance3 = 0 Then
+                                         noerr = True
+                                         Exit For
+
+
+                                     End If
+
+                                 Next
+
+                             Else
+
+                                 '线到面的距离有问题,不再往下进行
+                                 noerr = False
+
+                             End If
+                         Else
+
+                             noerr = True
+                         End If
+
+                         If (noerr) Then
+                             Return surfref
+                         Else
+
+                             Return Nothing
+
+                         End If
+
+                     End Function
+        Dim fix_action As Action(Of HybridShape, HybridShape, Reference)
+        fix_action = Sub(vct As HybridShape, pnt As HybridShape, surref As Reference)
+                         If (vct Is Nothing) Or (surref Is Nothing) Then
+
+                         Else
+                             Dim lineref = part1.CreateReferenceFromObject(vct)
+
+                             Dim hybridShapeIntersection1 As HybridShapeIntersection
+                             hybridShapeIntersection1 = part1.HybridShapeFactory.AddNewIntersection(lineref, surref)
+                             hybridShapeIntersection1.PointType = 0
+                             ' hybridShapeIntersection1.ExtendMode = 3
+                             hb.AppendHybridShape(hybridShapeIntersection1)
+                             part1.Update()
+                             ' hb.AppendHybridShape(hybridShapeIntersection1)
+                             sourceinter.Clear()
+                             sourceinter.Add(hybridShapeIntersection1)
+                             sourceinter.Copy()
+                             destination.Clear()
+                             destination.Add(hb)
+                             destination.PasteSpecial("CATPrtResultWithOutLink")
+
+                             sourceinter.Clear()
+                             sourceinter.Add(hybridShapeIntersection1)
+                             sourceinter.Delete()
+
+
+
+                             source.Clear()
+                             If (Not pnt Is Nothing) Then
+                                 source.Add(vct)
+
+                                 source.Delete()
+                                 source.Clear()
+                             End If
+
+
+
+                             part1.Update()
+
+                         End If
+
+
+
+
+
+                     End Sub
+
         For Each pp As CENPoint In Points_.Values
-
-
             'Get the measurement for the point
             Measurement = SPAWorkb.GetMeasurable(pp.MyPoint)
-
-            'Get the coordinates (Part based) from this point
-            Call Measurement.GetPoint(Coords)
-            ' reference1 = part1.CreateReferenceFromObject(pp.MyPoint)
-            '量取线到法向的距离
             reference2 = part1.CreateReferenceFromObject(pp.MyVector)
+            'Dim surface As HybridShapeExtract
+            surface = surflist(0)
+            '  Dim reference1 As Reference
+            reference1 = part1.CreateReferenceFromObject(surface)
+
+            If pp.xxr = 0 And pp.yyr = 0 And pp.zzr = 0 Then
+                ppstatic.Add(1, "Fix_wrong_points:" + pp.Frame + " - " + pp.FastenerName + " - " + pp.Diam)
+
+                fix_action(pp.MyVector, pp.MyPoint, reference1)
+
+                Continue For
+            End If
 
             Dim MinimumDistance As Double
             MinimumDistance = Measurement.GetMinimumDistance(reference2)
-
-
-
-            Dim surface As HybridShapeExtract
-            surface = surflist(0)
-            Dim reference1 As Reference
-            reference1 = part1.CreateReferenceFromObject(surface)
 
             '点到面上的距离
             Dim MinimumDistance2 As Double
             MinimumDistance2 = Measurement.GetMinimumDistance(reference1)
 
-            '线到面的距离 
-            Dim TheMeasurable As SPATypeLib.Measurable
-            TheMeasurable = SPAWorkb.GetMeasurable(reference2)
-            Dim MinimumDistance3 As Double
-            MinimumDistance3 = TheMeasurable.GetMinimumDistance(reference1)
+            Dim surfref = lineToSurf(pp.MyVector)
 
-            Dim noerr As Boolean = False
+            If (Not surfref Is Nothing) And (MinimumDistance > 0 Or (MinimumDistance2 > 0 And MinimumDistance2 < 50)) Then
 
-            If MinimumDistance3 > 0 Then
-                If surfcount > 1 Then
-
-
-                    For si As Integer = 1 To surfcount - 1
-
-
-
-
-                        surface = surflist(si)
-                        reference1 = part1.CreateReferenceFromObject(surface)
-                        MinimumDistance3 = TheMeasurable.GetMinimumDistance(reference1)
-                        If MinimumDistance3 = 0 Then
-                            noerr = True
-                            Exit For
-
-
-                        End If
-
-                    Next
-
+                If MinimumDistance2 > 0 Then
+                    ppstatic.Add(1, "Fix_out_of_surf:" + pp.Frame + " - " + pp.FastenerName + " - " + pp.Diam)
                 Else
 
-                    '线到面的距离有问题,不再往下进行
-                    noerr = False
-
+                    ppstatic.Add(1, "Fix_out_of_vec" + pp.Frame + " - " + pp.FastenerName + " - " + pp.Diam)
                 End If
-            Else
-
-                noerr = True
-            End If
-
-
-
-
-
-
-
-            If noerr And (MinimumDistance > 0 Or MinimumDistance2 > 0) Then
-                '检测到点不在法向上
-                ppstatic.Add(1, "Fix_out_of_vec_surf:" + pp.Frame + " - " + pp.Diam)
-                Dim hybridShapeIntersection1 As HybridShapeIntersection
-                hybridShapeIntersection1 = part1.HybridShapeFactory.AddNewIntersection(reference2, reference1)
-                hybridShapeIntersection1.PointType = 0
-                ' hybridShapeIntersection1.ExtendMode = 3
-                hb.AppendHybridShape(hybridShapeIntersection1)
-                part1.Update()
-                ' hb.AppendHybridShape(hybridShapeIntersection1)
-                sourceinter.Clear()
-                sourceinter.Add(hybridShapeIntersection1)
-                sourceinter.Copy()
-                destination.Clear()
-                destination.Add(hb)
-                destination.PasteSpecial("CATPrtResultWithOutLink")
-
-                sourceinter.Clear()
-                sourceinter.Add(hybridShapeIntersection1)
-                sourceinter.Delete()
-
-
-
-                source.Clear()
-
-                source.Add(pp.MyPoint)
-
-                source.Delete()
-
-
-                part1.Update()
-
+                fix_action(pp.MyVector, pp.MyPoint, surfref)
                 '重新绑定point
                 '不做其他操作了，则无必要
                 'pp.MyPoint = hb.HybridShapes.Item(hb.HybridShapes.Count)
@@ -382,19 +289,23 @@ Public Class CENPoints
 
 
         Next
-        '整体删除临时几何图形集
-        'sourceinter.Clear()
-        'sourceinter.Add(hybridShapeIntersection1)
-        'sourceinter.Delete()
 
-
+        'fix no points line
+        For Each pp As HybridShape In singleline
+            Dim surfref = lineToSurf(pp)
+            If Not surfref Is Nothing Then
+                ppstatic.Add(1, "Fix_out_singellines:" + pp.Name + " - ")
+                fix_action(pp, Nothing, surfref)
+            End If
+        Next
+        source.Clear()
         Return ppstatic
 
     End Function
     Public Function del_dupli(partfilename As String) As processStatic
         Dim ppstatic As New processStatic
 
-        If dupli.Count <> 0 Then
+        If dupli.Count <> 0 Or wrongpoints.Count <> 0 Then
 
 
             Dim documents1 As Documents
@@ -413,17 +324,41 @@ Public Class CENPoints
 
             source.Clear()
 
+            Dim deleteShape As Action(Of HybridShape) = Sub(hs As HybridShape)
+                                                            source.Clear()
+                                                            If Not hs Is Nothing Then
+
+                                                                source.Add(hs)
+                                                                Try
+                                                                    source.Delete()
+
+                                                                Catch ex As Exception
+                                                                    MsgBox(ex.Message + "\r\t" + hs.Name)
+
+                                                                End Try
+
+                                                            End If
+
+
+                                                        End Sub
             For Each pp As CENPoint In dupli
 
-                source.Add(pp.MyPoint)
-                source.Add(pp.MyVector)
+                deleteShape(pp.MyPoint)
+
+                deleteShape(pp.MyVector)
                 ppstatic.Add(1, "Fix_dupli_points_vecs:" + pp.Frame + " - " + pp.Diam)
+
             Next
 
+            'delete the single points
+            For Each pp As HybridShape In wrongpoints
 
+                deleteShape(pp)
 
-            source.Delete()
+                ppstatic.Add(1, "Fix_single_points:" + pp.Name + " - ")
+            Next
 
+            source.Clear()
 
             part1.Update()
 
@@ -432,16 +367,7 @@ Public Class CENPoints
     End Function
 
 
-    '
-    '   Default destructor
-    '
-    'Protected Overrides Sub Finalize()
-    '    RemoveAll()
-    'End Sub
 
-    '
-    '   Adds a rivet to a collection
-    '
     Public Sub Add(ByRef tmppoint As CENPoint)
         If Points_.Keys.Contains(tmppoint.uuid) Then
             dupli.Add(tmppoint)
@@ -450,6 +376,17 @@ Public Class CENPoints
             Points_.Add(tmppoint.uuid, tmppoint)
         End If
     End Sub
+    Public Function Contains(tmppoint As CENPoint) As Boolean
+        If Points_.Keys.Contains(tmppoint.uuid) Then
+            Return True
+        Else
+            Return False
+
+        End If
+
+    End Function
+
+
     Public Sub Merge(tmp As CENPoints)
         For Each tmppoint As CENPoint In tmp.Points_.Values
             Add(tmppoint)
@@ -466,7 +403,15 @@ Public Class CENPoints
             dupli.Add(tmppoint)
 
         Next
+        For Each tmppoint As HybridShape In tmp.singleline
+            singleline.Add(tmppoint)
 
+        Next
+
+        For Each tmppoint As HybridShape In tmp.wrongpoints
+            wrongpoints.Add(tmppoint)
+
+        Next
 
 
     End Sub
@@ -485,6 +430,95 @@ Public Class CENPoints
                 ds.Add(tmppoint.Frame, tmppoint.FastenerName, tmppoint.Diam, tmppoint.MyVector)
 
             End If
+
+        Next
+
+        Return ds
+
+    End Function
+    Public Function createPointsToProcessTree(part1 As Part, surf As AnyObject) As processTreeList
+        Dim ds As New processTreeList
+        Dim i As Integer
+
+        Dim hybridShapeFactory1 As HybridShapeFactory
+        Dim reference1 As Reference
+        Dim reference2 As Reference
+        Dim SPAWorkb As INFITF.Workbench
+        Dim Measurement
+        CATIA = part1.Application
+        SPAWorkb = CATIA.ActiveDocument.GetWorkbench("SPAWorkbench")
+
+
+        hybridShapeFactory1 = part1.HybridShapeFactory
+        reference2 = part1.CreateReferenceFromObject(surf)
+        Dim hybridShapePointCoord1 As HybridShapePointCoord
+
+        'Create a folder to store the shapes
+        Dim tmphb = part1.HybridBodies.Add
+        tmphb.Name = "Temp"
+
+        For i = 0 To Points_.Count - 1
+            Dim tmppoint As CENPoint
+
+            tmppoint = Points_.Values.ElementAt(i)
+            'Create the shapes by the coordination
+
+            hybridShapePointCoord1 = hybridShapeFactory1.AddNewPointCoord(tmppoint.X, tmppoint.Y, tmppoint.Z)
+            tmphb.AppendHybridShape(hybridShapePointCoord1)
+            part1.Update()
+            'Project to the surface
+            reference1 = part1.CreateReferenceFromObject(hybridShapePointCoord1)
+
+            'First measure the distance 
+
+
+            Dim Coords(2) As Object
+
+            'Get the measurement for the point
+            Measurement = SPAWorkb.GetMeasurable(reference1)
+
+            'Get the coordinates (Part based) from this point
+            Call Measurement.GetPoint(Coords)
+            Dim MinimumDistance As Double
+            MinimumDistance = Measurement.GetMinimumDistance(reference2)
+
+            If MinimumDistance < 20 Then
+
+
+
+
+                Dim hybridShapeProject1 As HybridShapeProject
+                hybridShapeProject1 = hybridShapeFactory1.AddNewProject(reference1, reference2)
+                hybridShapeProject1.SolutionType = 0
+                hybridShapeProject1.Normal = True
+                hybridShapeProject1.SmoothingType = 0
+                tmphb.AppendHybridShape(hybridShapeProject1)
+                Try
+
+                    part1.Update()
+                Catch ex As Exception
+                    Dim seletion As Selection
+                    seletion = CATIA.ActiveDocument.selection
+                    seletion.Clear()
+                    seletion.Add(hybridShapeProject1)
+                    seletion.Delete()
+
+                    Continue For
+                End Try
+                'Create the line
+                reference1 = part1.CreateReferenceFromObject(hybridShapeProject1)
+                Dim hybridShapeLineNormal1 As HybridShapeLineNormal
+                hybridShapeLineNormal1 = hybridShapeFactory1.AddNewLineNormal(reference1, reference2, -15.0#, 15.0#, False)
+                tmphb.AppendHybridShape(hybridShapeLineNormal1)
+
+                part1.Update()
+
+                ds.Add("fromSP", tmppoint.FastenerName, "TEMP", hybridShapeProject1)
+                ds.Add("fromSP", tmppoint.FastenerName, "TEMP", hybridShapeLineNormal1)
+
+            End If
+
+
 
         Next
 

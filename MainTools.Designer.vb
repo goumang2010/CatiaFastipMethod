@@ -24,6 +24,7 @@ Partial Class MainTools
     Private Sub InitializeComponent()
         Me.TabControl1 = New System.Windows.Forms.TabControl()
         Me.TabPage1 = New System.Windows.Forms.TabPage()
+        Me.Button12 = New System.Windows.Forms.Button()
         Me.TextBox1 = New System.Windows.Forms.TextBox()
         Me.Button7 = New System.Windows.Forms.Button()
         Me.Button16 = New System.Windows.Forms.Button()
@@ -92,6 +93,7 @@ Partial Class MainTools
         Me.SavingFoldersToolStripMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.rootGeoSet = New System.Windows.Forms.TextBox()
         Me.Button8 = New System.Windows.Forms.Button()
+        Me.Button13 = New System.Windows.Forms.Button()
         Me.TabControl1.SuspendLayout()
         Me.TabPage1.SuspendLayout()
         Me.Frame4.SuspendLayout()
@@ -116,6 +118,7 @@ Partial Class MainTools
         '
         'TabPage1
         '
+        Me.TabPage1.Controls.Add(Me.Button12)
         Me.TabPage1.Controls.Add(Me.TextBox1)
         Me.TabPage1.Controls.Add(Me.Button7)
         Me.TabPage1.Controls.Add(Me.Button16)
@@ -134,6 +137,15 @@ Partial Class MainTools
         Me.TabPage1.TabIndex = 0
         Me.TabPage1.Text = "Create TVA"
         Me.TabPage1.UseVisualStyleBackColor = True
+        '
+        'Button12
+        '
+        Me.Button12.Location = New System.Drawing.Point(326, 257)
+        Me.Button12.Name = "Button12"
+        Me.Button12.Size = New System.Drawing.Size(104, 47)
+        Me.Button12.TabIndex = 26
+        Me.Button12.Text = "Create only frme SP"
+        Me.Button12.UseVisualStyleBackColor = True
         '
         'TextBox1
         '
@@ -162,7 +174,7 @@ Partial Class MainTools
         '
         'Button15
         '
-        Me.Button15.Location = New System.Drawing.Point(436, 242)
+        Me.Button15.Location = New System.Drawing.Point(442, 204)
         Me.Button15.Name = "Button15"
         Me.Button15.Size = New System.Drawing.Size(104, 47)
         Me.Button15.TabIndex = 23
@@ -171,7 +183,7 @@ Partial Class MainTools
         '
         'Button14
         '
-        Me.Button14.Location = New System.Drawing.Point(326, 242)
+        Me.Button14.Location = New System.Drawing.Point(326, 204)
         Me.Button14.Name = "Button14"
         Me.Button14.Size = New System.Drawing.Size(104, 47)
         Me.Button14.TabIndex = 21
@@ -795,11 +807,22 @@ Partial Class MainTools
         Me.Button8.Text = "If not pilot_Holes"
         Me.Button8.UseVisualStyleBackColor = True
         '
+        'Button13
+        '
+        Me.Button13.Enabled = False
+        Me.Button13.Location = New System.Drawing.Point(421, 28)
+        Me.Button13.Name = "Button13"
+        Me.Button13.Size = New System.Drawing.Size(88, 40)
+        Me.Button13.TabIndex = 30
+        Me.Button13.Text = "BREAK"
+        Me.Button13.UseVisualStyleBackColor = True
+        '
         'MainTools
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 12.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(610, 566)
+        Me.Controls.Add(Me.Button13)
         Me.Controls.Add(Me.Button8)
         Me.Controls.Add(Me.rootGeoSet)
         Me.Controls.Add(Me.surface_select)
@@ -902,4 +925,6 @@ Partial Class MainTools
     Friend WithEvents Button9 As Windows.Forms.Button
     Friend WithEvents Button11 As Windows.Forms.Button
     Friend WithEvents DataGridView1 As Windows.Forms.DataGridView
+    Friend WithEvents Button12 As Windows.Forms.Button
+    Friend WithEvents Button13 As Windows.Forms.Button
 End Class

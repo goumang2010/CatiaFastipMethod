@@ -60,6 +60,8 @@ Public Class CENSP01
             Name_ = value
         End Set
     End Property
+
+
     Public Function to_point() As CENPoint
         Dim aaa As New CENPoint()
         With aaa
@@ -67,6 +69,7 @@ Public Class CENSP01
             .Y = Y
             .Z = Z
             .FastenerName = name
+
         End With
         aaa.iniuuid()
         Return aaa
