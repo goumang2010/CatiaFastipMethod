@@ -660,6 +660,9 @@ Public Class CENPoints
             If (framename.ToLower.Contains("win")) Then
                 location2 = "WIN"
             End If
+            If (framename.ToLower.Contains("dou")) Then
+                location2 = "DOU"
+            End If
 
             Dim strSqlname As New System.Text.StringBuilder()
             strSqlname.Append(String.Format("INSERT INTO {0} (FastenerName,X,Y,Z,FrameName,ProcessType,XR,YR,ZR,UUID,STRNO,location,pointname,PFname,uuidP", productname))

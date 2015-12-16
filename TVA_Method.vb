@@ -24,6 +24,7 @@ Public Class TVA_Method
     Public filename As String = ""
     Public pointGeo As String = "Pilot_Holes"
     Dim Fst_List As List(Of String) = Nothing
+    Public infoBag As Dictionary(Of String, String)
 
 
 
@@ -32,7 +33,7 @@ Public Class TVA_Method
         Get
             If Fst_List Is Nothing Then
 
-                Fst_List = autorivet_op.allfast_list
+                Fst_List = AutorivetDB.allfast_list
 
             End If
             Return Fst_List
@@ -1064,7 +1065,7 @@ Public Class TVA_Method
         Dim processtree = New processTreeBase()
         Dim bugcontainer = New processStatic()
 
-
+        infoBag = New Dictionary(Of String, String)()
         'Use delegate to recurse
 
         'Dim MyGeoSet = pilot_geoset()
@@ -1753,18 +1754,20 @@ Public Class TVA_Method
                               wb.Sheets(1).Cells(m, 1).Value = "仅校准(导孔):"
                               wb.Sheets(1).Cells(m, 2).Value = FRChole
 
+
+
                               m = m + 1
 
                               wb.Sheets(1).Cells(m, 1).Value = "校准(任意)插钉:"
                               wb.Sheets(1).Cells(m, 2).Value = highliterRC
-
-
+                              highlitesum = highlitesum + highliterRC
+                              autosum += highliterRC
 
                               m = m + 1
 
                               wb.Sheets(1).Cells(m, 1).Value = "校准导孔安装:"
                               wb.Sheets(1).Cells(m, 2).Value = RChole
-
+                              autosum += RChole
                               m = m + 1
 
                               wb.Sheets(1).Cells(m, 1).Value = "5号铆钉钻铆:"
@@ -1836,7 +1839,7 @@ Public Class TVA_Method
                               m = m + 1
                               wb.Sheets(1).Cells(m, 1).Value = "SUM"
                               wb.Sheets(1).Cells(m, 2).Value = sum
-
+                              infoBag.Add("SUM", sum.ToString())
                               '输出需要自动钻铆安装总数
 
                               m = m + 1
@@ -1844,6 +1847,8 @@ Public Class TVA_Method
                               wb.Sheets(1).Cells(m, 2).Value = autosum
                               wb.Sheets(1).Cells(m, 3).Value = autosum / sum
                               wb.Sheets(1).Cells(m, 3).NumberFormatLocal = "0.00%"
+                              infoBag.Add("BY MACHINE", autosum.ToString())
+                              infoBag.Add("PERCENTAGE", autosum / sum)
                               '输出需要手动安装总数
 
                               m = m + 1
@@ -1952,7 +1957,7 @@ Public Class TVA_Method
                               wb.Sheets(1).Columns("B:Z").HorizontalAlignment = 3
                               wb.Sheets(1).Columns("A:Z").wraptext = True
 
-
+                              wb.Sheets(1).Name = filename
 
 
                           End Sub
@@ -3192,7 +3197,7 @@ Error_Handler:
 
     End Function
 
-    Public Shared Function Checkvector(ByRef MyGeoSet As HybridBody, buglocation As String) As processStatic
+    Public Function Checkvector(ByRef MyGeoSet As HybridBody, buglocation As String) As processStatic
 
         Dim bugfeedback As New processStatic()
         'On Error GoTo Here1
@@ -3221,11 +3226,11 @@ Error_Handler:
                 Dim SPAWorkb As Workbench
                 Dim Measurement
                 Dim Coords(2) As Object
-                Dim CATIA = MyGeoSet.Application
-                Dim partDoc = CATIA.ActiveDocument
+                '  Dim CATIA = MyGeoSet.Application
+                ' Dim partDoc = CATIA.ActiveDocument
 
-                Dim part1 As Part
-                part1 = partDoc.Part
+                ' Dim part1 As Part
+                '   part1 = Part
 
                 'Get the SPAWorkbench from the measurement
                 SPAWorkb = CATIA.ActiveDocument.GetWorkbench("SPAWorkbench")
@@ -3237,12 +3242,12 @@ Error_Handler:
                 'Try
 
                 Call Measurement.GetPoint(Coords)
-                    'Catch ex As Exception
-                    '    Console.Write(MyGeoSet.HybridShapes.Item(m).Name)
-                    'End Try
+                'Catch ex As Exception
+                '    Console.Write(MyGeoSet.HybridShapes.Item(m).Name)
+                'End Try
 
 
-                    Dim myVect As Object
+                Dim myVect As Object
                 Dim s
                 Dim foundvect
                 foundvect = False
@@ -3256,7 +3261,7 @@ Error_Handler:
                             'Get the SPAWorkbench from the measurement
                             SPAWorkb = CATIA.ActiveDocument.GetWorkbench("SPAWorkbench")
                             Dim reference4 As Reference
-                            reference4 = part1.CreateReferenceFromObject(MyGeoSet.HybridShapes.Item(s))
+                            reference4 = Part.CreateReferenceFromObject(MyGeoSet.HybridShapes.Item(s))
                             Dim MinimumDistance As Double
                             MinimumDistance = Measurement.GetMinimumDistance(reference4)
 

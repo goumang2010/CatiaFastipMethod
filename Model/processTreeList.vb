@@ -17,7 +17,7 @@ Public Class processTreeList
         Get
             If fast_List Is Nothing Then
 
-                fast_List = autorivet_op.allfast_list()
+                fast_List = AutorivetDB.allfast_list()
             End If
             Return fast_List
         End Get

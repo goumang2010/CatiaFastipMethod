@@ -93,7 +93,7 @@ Public Class MainTools
         'initial the fasterner list,if it can not be fetched from database,then load it via exceltable
         Try
 
-            FastNames_ = autorivet_op.allfast_list()
+            FastNames_ = AutorivetDB.allfast_list()
             lookuptable_path.Text = "From Datebase"
 
         Catch ex As Exception
@@ -135,7 +135,7 @@ Public Class MainTools
 
         Try
 
-            ProdList = autorivet_op.fullname_list("concat(图号,'_',名称,'_',站位号)")
+            ProdList = AutorivetDB.fullname_list("concat(图号,'_',名称,'_',站位号)")
 
 
         Catch ex As Exception
