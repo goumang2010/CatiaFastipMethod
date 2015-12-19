@@ -1957,7 +1957,7 @@ Public Class TVA_Method
                               wb.Sheets(1).Columns("B:Z").HorizontalAlignment = 3
                               wb.Sheets(1).Columns("A:Z").wraptext = True
 
-                              wb.Sheets(1).Name = filename
+                              wb.Sheets(1).Name = filename.Substring(0, 13)
 
 
                           End Sub
