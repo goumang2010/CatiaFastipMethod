@@ -3,7 +3,7 @@ Imports ProductStructureTypeLib
 Imports MECMOD
 Imports INFITF
 
-Imports mysqlsolution
+Imports GoumangToolKit
 Imports OFFICE_Method
 Imports HybridShapeTypeLib
 Imports System.Threading
@@ -688,11 +688,11 @@ Public Class MainTools
 
 
 
-    Private Sub NCToolsToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles NCToolsToolStripMenuItem.Click
-        Dim f1 = New program_input()
-        f1.inputValue = ""
-        f1.Show()
-    End Sub
+    'Private Sub NCToolsToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles NCToolsToolStripMenuItem.Click
+    '    Dim f1 = New program_input()
+    '    f1.inputValue = ""
+    '    f1.Show()
+    'End Sub
 
     Private Sub DatabaseToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles DatabaseToolStripMenuItem.Click
         Dim f1 = New setting_database

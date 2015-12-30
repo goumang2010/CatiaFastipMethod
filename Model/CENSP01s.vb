@@ -1,7 +1,7 @@
 ﻿Option Explicit On
 
 Imports ProductStructureTypeLib
-Imports mysqlsolution
+Imports GoumangToolKit
 
 Public Class CENSP01s
 

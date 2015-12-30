@@ -9,7 +9,7 @@ Imports HybridShapeTypeLib
 Imports System.Collections.Generic
 Imports KnowledgewareTypeLib
 Imports INFITF
-Imports mysqlsolution
+Imports GoumangToolKit
 
 Public Class processTree : Inherits processTreeBase
     Public fastenertree As New Dictionary(Of String, List(Of HybridShape))

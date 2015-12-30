@@ -1,5 +1,5 @@
 ﻿Option Explicit On
-Imports mysqlsolution
+Imports GoumangToolKit
 Imports MECMOD
 Imports HybridShapeTypeLib
 Imports INFITF

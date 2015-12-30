@@ -7,7 +7,7 @@ Imports MECMOD
 Imports HybridShapeTypeLib
 Imports KnowledgewareTypeLib
 Imports INFITF
-Imports mysqlsolution
+Imports GoumangToolKit
 Imports System.Text
 
 Public Class TVA_Method
@@ -1261,12 +1261,6 @@ Public Class TVA_Method
                                          If (MyNewGeoSet.Name.Contains("AUTOMATED FASTENING") Or MyNewGeoSet.Name.Contains("TEMP")) Then
 
 
-
-                                             'If database Then
-
-                                             '    updatedatabase(MyNewGeoSet, MyGeoSet.Parent.name, MyGeoSet.Name, Strings.Split(MyNewGeoSet.Name, " - ")(1))
-                                             'End If
-
                                              If color Then
 
                                                  Dim selection1 As Object
@@ -1337,29 +1331,29 @@ Public Class TVA_Method
                                                          selection1.VisProperties.SetRealColor(0, 0, 0, 1)
                                                          selection1.VisProperties.SetSymbolType(1)
                                                      Else
+                                                         selection1.VisProperties.SetRealColor(0, 0, 0, 1)
+                                                         'If Strings.InStr(MyGeoSet.Name, "5-") Then
+                                                         '    '都改为深色
 
-                                                         If Strings.InStr(MyGeoSet.Name, "5-") Then
-                                                             '都改为深色
+                                                         '    If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
+                                                         '        '紫色
+                                                         '        selection1.VisProperties.SetRealColor(255, 0, 255, 1)
+                                                         '    Else
+                                                         '        '深色
+                                                         '        selection1.VisProperties.SetRealColor(255, 165, 0, 1)
+                                                         '    End If
 
-                                                             If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
-                                                                 '紫色
-                                                                 selection1.VisProperties.SetRealColor(255, 0, 255, 1)
-                                                             Else
-                                                                 '深色
-                                                                 selection1.VisProperties.SetRealColor(255, 165, 0, 1)
-                                                             End If
+                                                         'Else
+                                                         '    '棕色
 
-                                                         Else
-                                                             '棕色
+                                                         '    If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
 
-                                                             If Strings.InStr(MyGeoSet.Name, "5020AD") Or Strings.InStr(MyGeoSet.Name, "6002AG") Then
-
-                                                                 selection1.VisProperties.SetRealColor(64, 32, 32, 1)
-                                                             Else
-                                                                 'Make protruding head 6# darker
-                                                                 selection1.VisProperties.SetRealColor(64, 32, 0, 1)
-                                                             End If
-                                                         End If
+                                                         '        selection1.VisProperties.SetRealColor(64, 32, 32, 1)
+                                                         '    Else
+                                                         '        'Make protruding head 6# darker
+                                                         '        selection1.VisProperties.SetRealColor(64, 32, 0, 1)
+                                                         '    End If
+                                                         'End If
 
                                                          If Strings.InStr(MyNewGeoSet.Name, "DRILL") Then
                                                              selection1.VisProperties.SetSymbolType(4)

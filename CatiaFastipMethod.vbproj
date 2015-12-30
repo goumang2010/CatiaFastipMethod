@@ -107,14 +107,6 @@
       <HintPath>DLL\Interop.SPATypeLib.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
-    <Reference Include="mysqlsolution, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\mysqlsolution\mysqlsolution\bin\Debug\mysqlsolution.dll</HintPath>
-    </Reference>
-    <Reference Include="OFFICE_Method, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\OFFICE_Method\OFFICE_Method\bin\Debug\OFFICE_Method.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
@@ -201,6 +193,16 @@
       <CustomToolNamespace>My</CustomToolNamespace>
       <LastGenOutput>Settings.Designer.vb</LastGenOutput>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\GoumangToolKit\goumangToolKit\GoumangToolKit.csproj">
+      <Project>{41f56599-8d65-48b1-ac56-99e8d146bc2d}</Project>
+      <Name>GoumangToolKit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\GoumangToolKit\OfficeMethod\OfficeMethod.vbproj">
+      <Project>{78d7e043-4963-44c0-9631-9e9549eafe91}</Project>
+      <Name>OfficeMethod</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

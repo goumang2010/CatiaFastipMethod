@@ -4,7 +4,7 @@ Imports FWOlpProcFeat
 Imports DNBIgpTagPath
 Imports SPATypeLib
 Imports ProductStructureTypeLib
-Imports mysqlsolution
+Imports GoumangToolKit
 Imports CENFasTIP
 Imports System.Text.RegularExpressions
 Imports KnowledgewareTypeLib
